@@ -3,9 +3,9 @@ Strictly complete these phases in order. Do not skip to UI before API is tested.
 Once complete leave a checkmark.
 
 ## Phase 1: Backend & DB Foundation
-- [ ] Initialize Express + TypeScript server.
-- [ ] Implement `better-sqlite3` and create tables strictly matching `DATABASE.md`.
-- [ ] Create basic CRUD REST endpoints for `/api/companies`, `/api/search_configs`, and `/api/llm_configs`.
+- [x] Initialize Express + TypeScript server.
+- [x] Implement `better-sqlite3` and create tables strictly matching `DATABASE.md`.
+- [x] Create basic CRUD REST endpoints for `/api/companies`, `/api/search_configs`, and `/api/llm_configs`.
 
 ## Phase 2: Core Scraping Engine & Queue
 - [ ] Create an in-memory `QueueService` to handle scraping jobs sequentially.
