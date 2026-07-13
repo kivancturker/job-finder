@@ -7,6 +7,7 @@ import companiesRouter from './routes/companies';
 import searchConfigsRouter from './routes/searchConfigs';
 import llmConfigsRouter from './routes/llmConfigs';
 import jobsRouter from './routes/jobs';
+import runSearchRouter from './routes/runSearch';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use('/api/companies', companiesRouter);
 app.use('/api/search_configs', searchConfigsRouter);
 app.use('/api/llm_configs', llmConfigsRouter);
 app.use('/api/jobs', jobsRouter);
+app.use('/api/run-search', runSearchRouter);
 
 // Health check endpoint
 app.get('/', (req: Request, res: Response) => {

@@ -8,10 +8,10 @@ Once complete leave a checkmark.
 - [x] Create basic CRUD REST endpoints for `/api/companies`, `/api/search_configs`, and `/api/llm_configs`.
 
 ## Phase 2: Core Scraping Engine & Queue
-- [ ] Create an in-memory `QueueService` to handle scraping jobs sequentially.
-- [ ] Implement Cheerio scraper (fast) and Playwright scraper (fallback).
-- [ ] Create a deduplication check: before inserting a job, query the DB to ensure `url` does not exist.
-- [ ] Build the `/api/run-search` endpoint. It must accept a `search_config_id`, fetch all companies, and push them to the `QueueService`.
+- [x] Create an in-memory `QueueService` to handle scraping jobs sequentially.
+- [x] Implement Cheerio scraper (fast) and Playwright scraper (fallback).
+- [x] Create a deduplication check: before inserting a job, query the DB to ensure `url` does not exist.
+- [x] Build the `/api/run-search` endpoint. It must accept a `search_config_id`, fetch all companies, and push them to the `QueueService`.
 
 ## Phase 3: AI Evaluation Pipeline
 - [ ] Implement the Pre-Filter: Check scraped text against `search_configs.keywords`. If no match, discard or mark `is_relevant = false`.
