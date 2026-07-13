@@ -15,6 +15,7 @@ export interface SearchConfigRow {
   negative_keywords: string | null; // JSON array of strings
   min_experience: number;
   target_countries: string | null; // JSON array of strings
+  custom_prompt: string | null;
   created_at: string;
 }
 
@@ -29,6 +30,7 @@ export interface JobPostingRow {
   ai_parsed: number; // 0 or 1
   ai_summary: string | null;
   tech_stack: string | null; // JSON array of strings
+  min_experience: number;
   is_visited: number; // 0 or 1
   created_at: string;
 }
@@ -58,6 +60,7 @@ export interface SearchConfig {
   negative_keywords: string[] | null;
   min_experience: number;
   target_countries: string[] | null;
+  custom_prompt: string | null;
   created_at: string;
 }
 
@@ -72,6 +75,7 @@ export interface JobPosting {
   ai_parsed: boolean;
   ai_summary: string | null;
   tech_stack: string[] | null;
+  min_experience: number;
   is_visited: boolean;
   created_at: string;
 }

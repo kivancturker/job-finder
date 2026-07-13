@@ -27,6 +27,7 @@ export const mapSearchConfig = (row: SearchConfigRow): SearchConfig => ({
   negative_keywords: row.negative_keywords ? JSON.parse(row.negative_keywords) : null,
   min_experience: row.min_experience,
   target_countries: row.target_countries ? JSON.parse(row.target_countries) : null,
+  custom_prompt: row.custom_prompt || null,
   created_at: row.created_at
 });
 
@@ -45,6 +46,7 @@ export const mapJobPosting = (
   ai_parsed: Boolean(row.ai_parsed),
   ai_summary: row.ai_summary,
   tech_stack: row.tech_stack ? JSON.parse(row.tech_stack) : null,
+  min_experience: row.min_experience || 0,
   is_visited: Boolean(row.is_visited),
   created_at: row.created_at
 });

@@ -79,9 +79,9 @@ router.post('/:id/evaluate', async (req: Request, res: Response<ApiResponse<JobP
 
     db.prepare(`
       UPDATE job_postings 
-      SET is_relevant = ?, ai_parsed = 1, ai_summary = ?, tech_stack = ? 
+      SET is_relevant = ?, ai_parsed = 1, ai_summary = ?, tech_stack = ?, min_experience = ? 
       WHERE id = ?
-    `).run(isRelevant, aiResult.ai_summary, techStackStr, id);
+    `).run(isRelevant, aiResult.ai_summary, techStackStr, aiResult.min_experience, id);
 
     // 6. Return updated job details
     const updatedJob = db.prepare(`

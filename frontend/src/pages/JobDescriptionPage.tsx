@@ -146,20 +146,29 @@ export default function JobDescriptionPage() {
               </div>
             ) : job.ai_parsed ? (
               <div className="space-y-5">
-                {/* Relevance Status */}
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Evaluation Status:</span>
-                  {job.is_relevant ? (
-                    <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-semibold">
-                      <CheckCircle2 size={14} />
-                      <span>Relevant Deep-Tech Fit</span>
+                {/* Relevance & Experience Status */}
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Evaluation Status:</span>
+                    {job.is_relevant ? (
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-semibold">
+                        <CheckCircle2 size={14} />
+                        <span>Relevant Fit</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-xs font-semibold">
+                        <XCircle size={14} />
+                        <span>Irrelevant Position</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Required Experience:</span>
+                    <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-lg text-xs font-mono font-bold">
+                      {job.min_experience > 0 ? `${job.min_experience}+ years` : 'Not specified / Entry'}
                     </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-xs font-semibold">
-                      <XCircle size={14} />
-                      <span>Irrelevant Position</span>
-                    </span>
-                  )}
+                  </div>
                 </div>
 
                 {/* AI Summary */}

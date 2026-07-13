@@ -13,6 +13,7 @@ export default function StrategyForm({ onCancel, onSuccess }: StrategyFormProps)
   const [negativeKeywords, setNegativeKeywords] = useState('');
   const [minExperience, setMinExperience] = useState(0);
   const [targetCountries, setTargetCountries] = useState('');
+  const [customPrompt, setCustomPrompt] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ export default function StrategyForm({ onCancel, onSuccess }: StrategyFormProps)
       negative_keywords: negKwArr.length > 0 ? negKwArr : null,
       min_experience: Number(minExperience),
       target_countries: countriesArr.length > 0 ? countriesArr : null,
+      custom_prompt: customPrompt.trim() ? customPrompt.trim() : null,
     };
 
     try {
@@ -136,6 +138,18 @@ export default function StrategyForm({ onCancel, onSuccess }: StrategyFormProps)
               disabled={formLoading}
             />
           </div>
+        </div>
+
+        {/* Custom Prompt */}
+        <div className="space-y-1">
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Custom AI prompt / context (optional)</label>
+          <textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder="e.g. Look for roles focusing on storage engines or compiler design. Exclude software-only engineering jobs unless they are optimization software."
+            className="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 h-20 resize-none font-sans"
+            disabled={formLoading}
+          />
         </div>
 
         <button

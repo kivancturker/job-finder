@@ -35,6 +35,7 @@ const schema = `
     negative_keywords TEXT, -- JSON array of strings
     min_experience INTEGER DEFAULT 0,
     target_countries TEXT, -- JSON array of strings
+    custom_prompt TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -49,12 +50,13 @@ const schema = `
     ai_parsed INTEGER DEFAULT 0, -- 0 = false, 1 = true
     ai_summary TEXT,
     tech_stack TEXT, -- JSON array of strings
+    min_experience INTEGER DEFAULT 0,
     is_visited INTEGER DEFAULT 0, -- 0 = false, 1 = true
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(company_id) REFERENCES companies(id) ON DELETE CASCADE,
     FOREIGN KEY(search_config_id) REFERENCES search_configs(id) ON DELETE CASCADE
   );
-
+  
   CREATE TABLE IF NOT EXISTS llm_configs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider TEXT NOT NULL, -- Enum: 'ollama', 'openai', 'anthropic'
@@ -81,5 +83,28 @@ const schema = `
 
 // Run schema migration
 db.exec(schema);
+
+// Runtime migration to add columns if they don't exist in active databases
+try {
+  db.prepare("SELECT custom_prompt FROM search_configs LIMIT 1").get();
+} catch (err) {
+  console.log("Migrating database: Adding custom_prompt column to search_configs");
+  try {
+    db.prepare("ALTER TABLE search_configs ADD COLUMN custom_prompt TEXT").run();
+  } catch (alterErr: any) {
+    console.error("Failed to add custom_prompt column:", alterErr.message);
+  }
+}
+
+try {
+  db.prepare("SELECT min_experience FROM job_postings LIMIT 1").get();
+} catch (err) {
+  console.log("Migrating database: Adding min_experience column to job_postings");
+  try {
+    db.prepare("ALTER TABLE job_postings ADD COLUMN min_experience INTEGER DEFAULT 0").run();
+  } catch (alterErr: any) {
+    console.error("Failed to add min_experience column to job_postings:", alterErr.message);
+  }
+}
 
 export default db;

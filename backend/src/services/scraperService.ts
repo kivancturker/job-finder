@@ -246,8 +246,8 @@ export async function scrapeCompany(
 
   const checkUrlStmt = db.prepare('SELECT id FROM job_postings WHERE url = ?');
   const insertJobStmt = db.prepare(`
-    INSERT INTO job_postings (company_id, search_config_id, title, url, raw_text, is_relevant, ai_parsed, ai_summary, tech_stack, is_visited)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+    INSERT INTO job_postings (company_id, search_config_id, title, url, raw_text, is_relevant, ai_parsed, ai_summary, tech_stack, min_experience, is_visited)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
   `);
 
   for (const [url, title] of uniqueListingsMap.entries()) {
@@ -280,6 +280,7 @@ export async function scrapeCompany(
       let aiParsed = 0;
       let aiSummary = null;
       let techStack = null;
+      let minExperience = 0;
 
       if (!passesFilter) {
         log(`Job "${title}" failed keyword pre-filter. Skipping LLM.`);
@@ -295,6 +296,7 @@ export async function scrapeCompany(
             aiParsed = 1;
             aiSummary = aiResult.ai_summary;
             techStack = JSON.stringify(aiResult.tech_stack);
+            minExperience = aiResult.min_experience || 0;
             log(`LLM analysis complete for "${title}". Fit: ${aiResult.is_relevant ? 'RELEVANT' : 'IRRELEVANT'}`);
           } else {
             // No active LLM configuration
@@ -321,7 +323,8 @@ export async function scrapeCompany(
         isRelevant, 
         aiParsed, 
         aiSummary, 
-        techStack
+        techStack,
+        minExperience
       );
       processedCount++;
 

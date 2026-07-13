@@ -293,9 +293,9 @@ class QueueService {
 
           db.prepare(`
             UPDATE job_postings 
-            SET is_relevant = ?, ai_parsed = 1, ai_summary = ?, tech_stack = ? 
+            SET is_relevant = ?, ai_parsed = 1, ai_summary = ?, tech_stack = ?, min_experience = ? 
             WHERE id = ?
-          `).run(isRelevant, aiResult.ai_summary, techStackStr, job.id);
+          `).run(isRelevant, aiResult.ai_summary, techStackStr, aiResult.min_experience, job.id);
 
           onLog(`[${i+1}/${preMatches.length}] Result: ${aiResult.is_relevant ? 'RELEVANT' : 'IRRELEVANT'}. Fit summary: ${aiResult.ai_summary}`);
         } else {

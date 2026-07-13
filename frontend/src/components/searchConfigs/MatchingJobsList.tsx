@@ -43,42 +43,78 @@ export default function MatchingJobsList({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Strategy Title Header */}
-      <div className="p-6 border-b border-gray-900 shrink-0 bg-gray-950/20 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Matched Results</span>
-          <h2 className="text-xl font-display font-bold text-white tracking-tight leading-tight mt-0.5">
-            {selectedConfig.name}
-          </h2>
-        </div>
-        <div className="flex items-center gap-3">
-          {jobs.some(j => !j.ai_parsed && j.is_relevant) && (
-            <button
-              onClick={handleAnalyzePreMatches}
-              disabled={analyzing}
-              className="px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-violet-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-[0_2px_8px_rgba(99,102,241,0.15)] cursor-pointer disabled:opacity-50 transition-all border border-indigo-500/20"
-            >
-              {analyzing ? <Loader2 size={12} className="animate-spin" /> : <Brain size={12} />}
-              <span>Analyze Pre-matches</span>
-            </button>
-          )}
-
-          {/* Filters */}
-          <div className="flex bg-gray-950 rounded-lg p-0.5 border border-gray-900 text-[10px]">
-            {(['all', 'relevant', 'pre-match', 'irrelevant'] as const).map((opt) => (
-              <button
-                key={opt}
-                onClick={() => setFilter(opt)}
-                className={`px-2 py-1 rounded capitalize font-medium transition-all ${
-                  filter === opt ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+      <div className="p-6 border-b border-gray-900 shrink-0 bg-gray-950/20 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <div>
+            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Matched Results</span>
+            <h2 className="text-xl font-display font-bold text-white tracking-tight leading-tight mt-0.5">
+              {selectedConfig.name}
+            </h2>
           </div>
-          <span className="text-xs text-gray-400 font-medium ml-2">
-            {filteredJobs.length} jobs shown
-          </span>
+          <div className="flex items-center gap-3">
+            {jobs.some(j => !j.ai_parsed && j.is_relevant) && (
+              <button
+                onClick={handleAnalyzePreMatches}
+                disabled={analyzing}
+                className="px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-violet-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-[0_2px_8px_rgba(99,102,241,0.15)] cursor-pointer disabled:opacity-50 transition-all border border-indigo-500/20"
+              >
+                {analyzing ? <Loader2 size={12} className="animate-spin" /> : <Brain size={12} />}
+                <span>Analyze Pre-matches</span>
+              </button>
+            )}
+
+            {/* Filters */}
+            <div className="flex bg-gray-950 rounded-lg p-0.5 border border-gray-900 text-[10px]">
+              {(['all', 'relevant', 'pre-match', 'irrelevant'] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setFilter(opt)}
+                  className={`px-2 py-1 rounded capitalize font-medium transition-all ${
+                    filter === opt ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-gray-400 font-medium ml-2">
+              {filteredJobs.length} jobs shown
+            </span>
+          </div>
+        </div>
+
+        {/* Strategy Parameters Panel */}
+        <div className="p-3 bg-gray-950/40 border border-gray-900 rounded-xl space-y-2 text-[11px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-gray-400">
+            <div>
+              <span className="font-semibold text-gray-500 uppercase tracking-wider text-[9px]">Keywords:</span>{' '}
+              <span className="text-gray-300 font-medium">{selectedConfig.keywords.join(', ')}</span>
+            </div>
+            {selectedConfig.negative_keywords && selectedConfig.negative_keywords.length > 0 && (
+              <div>
+                <span className="font-semibold text-gray-500 uppercase tracking-wider text-[9px]">Exclude:</span>{' '}
+                <span className="text-gray-300 font-medium">{selectedConfig.negative_keywords.join(', ')}</span>
+              </div>
+            )}
+            <div>
+              <span className="font-semibold text-gray-500 uppercase tracking-wider text-[9px]">Min Experience:</span>{' '}
+              <span className="text-gray-300 font-medium">{selectedConfig.min_experience} yrs</span>
+            </div>
+            {selectedConfig.target_countries && selectedConfig.target_countries.length > 0 && (
+              <div>
+                <span className="font-semibold text-gray-500 uppercase tracking-wider text-[9px]">Countries:</span>{' '}
+                <span className="text-gray-300 font-medium">{selectedConfig.target_countries.join(', ')}</span>
+              </div>
+            )}
+          </div>
+          {selectedConfig.custom_prompt && (
+            <div className="pt-2 border-t border-gray-900/60">
+              <span className="font-semibold text-gray-500 uppercase tracking-wider text-[9px] block mb-1">Custom Strategy Prompt / Context:</span>
+              <p className="text-[11px] text-gray-300 bg-gray-950/50 p-2 rounded border border-gray-900 leading-relaxed font-sans max-h-24 overflow-y-auto whitespace-pre-wrap">
+                {selectedConfig.custom_prompt}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -122,10 +158,17 @@ export default function MatchingJobsList({
                     </div>
                   </div>
 
-                  {/* Company */}
-                  <div className="flex items-center gap-1.5 mt-1 text-xs text-indigo-400 font-semibold">
-                    <Briefcase size={12} />
-                    <span>{job.company_name || 'Unknown Company'}</span>
+                  {/* Company & Min Experience */}
+                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-indigo-400 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <Briefcase size={12} />
+                      <span>{job.company_name || 'Unknown Company'}</span>
+                    </span>
+                    {job.ai_parsed && job.min_experience > 0 && (
+                      <span className="px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-medium rounded-lg">
+                        Exp: {job.min_experience}+ yrs
+                      </span>
+                    )}
                   </div>
 
                   {/* Tech tags preview if available */}

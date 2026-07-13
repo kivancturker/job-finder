@@ -14,6 +14,7 @@ export interface SearchConfig {
   negative_keywords: string[] | null;
   min_experience: number;
   target_countries: string[] | null;
+  custom_prompt: string | null;
   created_at: string;
 }
 
@@ -29,6 +30,7 @@ export interface JobPosting {
   ai_parsed: boolean;
   ai_summary: string | null;
   tech_stack: string[] | null;
+  min_experience: number;
   is_visited: boolean;
   created_at: string;
 }

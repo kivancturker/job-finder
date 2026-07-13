@@ -32,7 +32,7 @@ router.get('/:id', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
 // POST /api/search_configs - Create a strategy
 router.post('/', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
   try {
-    const { name, keywords, negative_keywords, min_experience, target_countries } = req.body;
+    const { name, keywords, negative_keywords, min_experience, target_countries, custom_prompt } = req.body;
 
     if (!name) {
       return res.status(400).json({ success: false, error: 'Strategy name is required' });
@@ -48,11 +48,12 @@ router.post('/', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
     const negativeKeywordsStr = negative_keywords ? JSON.stringify(negative_keywords) : null;
     const targetCountriesStr = target_countries ? JSON.stringify(target_countries) : null;
     const exp = min_experience !== undefined ? Number(min_experience) : 0;
+    const customPromptStr = custom_prompt ? String(custom_prompt).trim() : null;
 
     const stmt = db.prepare(
-      'INSERT INTO search_configs (name, keywords, negative_keywords, min_experience, target_countries) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO search_configs (name, keywords, negative_keywords, min_experience, target_countries, custom_prompt) VALUES (?, ?, ?, ?, ?, ?)'
     );
-    const result = stmt.run(name, keywordsStr, negativeKeywordsStr, exp, targetCountriesStr);
+    const result = stmt.run(name, keywordsStr, negativeKeywordsStr, exp, targetCountriesStr, customPromptStr);
 
     const newRow = db.prepare('SELECT * FROM search_configs WHERE id = ?').get(result.lastInsertRowid) as SearchConfigRow;
     res.status(201).json({ success: true, data: mapSearchConfig(newRow) });
@@ -67,7 +68,7 @@ router.post('/', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
 // PUT /api/search_configs/:id - Update a strategy
 router.put('/:id', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
   try {
-    const { name, keywords, negative_keywords, min_experience, target_countries } = req.body;
+    const { name, keywords, negative_keywords, min_experience, target_countries, custom_prompt } = req.body;
     const { id } = req.params;
 
     const row = db.prepare('SELECT * FROM search_configs WHERE id = ?').get(id) as SearchConfigRow | undefined;
@@ -89,11 +90,12 @@ router.put('/:id', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
     const negativeKeywordsStr = negative_keywords ? JSON.stringify(negative_keywords) : null;
     const targetCountriesStr = target_countries ? JSON.stringify(target_countries) : null;
     const exp = min_experience !== undefined ? Number(min_experience) : 0;
+    const customPromptStr = custom_prompt ? String(custom_prompt).trim() : null;
 
     const stmt = db.prepare(
-      'UPDATE search_configs SET name = ?, keywords = ?, negative_keywords = ?, min_experience = ?, target_countries = ? WHERE id = ?'
+      'UPDATE search_configs SET name = ?, keywords = ?, negative_keywords = ?, min_experience = ?, target_countries = ?, custom_prompt = ? WHERE id = ?'
     );
-    stmt.run(name, keywordsStr, negativeKeywordsStr, exp, targetCountriesStr, id);
+    stmt.run(name, keywordsStr, negativeKeywordsStr, exp, targetCountriesStr, customPromptStr, id);
 
     const updatedRow = db.prepare('SELECT * FROM search_configs WHERE id = ?').get(id) as SearchConfigRow;
     res.json({ success: true, data: mapSearchConfig(updatedRow) });

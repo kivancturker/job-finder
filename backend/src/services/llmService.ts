@@ -39,15 +39,19 @@ function extractAndParseJSON(text: string): AIAnalysisResult {
 }
 
 export class LlmService {
-  private static getSystemPrompt(): string {
-    return `You are an elite Technical Recruiter and Staff Software Engineer specialized in Deep Tech, Systems Engineering, and Database Internals.
+  private static getSystemPrompt(customPrompt?: string | null): string {
+    const customInstructions = customPrompt 
+      ? `\n\nCRITICAL EVALUATION GUIDANCE (Strictly follow these custom rules provided by the user):\n${customPrompt}\n`
+      : '';
+
+    return `You are an elite Technical Recruiter and Specialist helping evaluate job descriptions.
 
 Your task is to analyze raw, often messy, scraped job description HTML/text and extract precise structured data based on the user's specific search criteria. 
-
+${customInstructions}
 EXTRACTION RULES:
-1. \`is_relevant\` (Boolean): Evaluate if the job aligns with the user's keywords and experience level. If the job heavily features the user's 'negative_keywords', set this to false. If it's a generic web-dev role but the user wants database internals, set this to false.
+1. \`is_relevant\` (Boolean): Evaluate if the job aligns with the user's keywords, target strategy, and custom criteria. If a user provided custom rules, follow them strictly to determine if the job is relevant. If the job heavily features the user's 'negative_keywords', set this to false.
 2. \`ai_summary\` (String): Write a maximum 2-sentence highly technical summary of the actual engineering challenges of the role. Ignore HR fluff. What is the core problem this person will solve?
-3. \`tech_stack\` (Array of Strings): Extract all programming languages, databases, consensus algorithms (e.g., Raft, Paxos), and infrastructure tools mentioned. Keep terms standardized (e.g., "C++", not "C/C++").
+3. \`tech_stack\` (Array of Strings): Extract all programming languages, databases, specialized systems, tools, frameworks, and key skills mentioned. Keep terms standardized.
 4. \`min_experience\` (Number): Extract the absolute minimum years of experience required. If not stated, return 0.
 
 OUTPUT FORMAT:
@@ -73,12 +77,16 @@ REQUIRED JSON SCHEMA:
       ? rawText.substring(0, RAW_TEXT_TRUNCATION_LIMIT) + '\n... [truncated due to length] ...'
       : rawText;
 
+    const customPromptPart = searchConfig.custom_prompt
+      ? `- Custom AI Evaluation Prompt/Context: ${searchConfig.custom_prompt}\n`
+      : '';
+
     return `Target Search Strategy: "${searchConfig.name}"
 - Positive Keywords (Match terms): ${JSON.stringify(searchConfig.keywords)}
 - Negative Keywords (Exclude terms): ${JSON.stringify(searchConfig.negative_keywords || [])}
 - Target Minimum Experience: ${searchConfig.min_experience} years
 - Target Location/Countries: ${JSON.stringify(searchConfig.target_countries || [])}
-
+${customPromptPart}
 Job Details:
 - Company Name: ${companyName}
 - Job Title: ${jobTitle}
@@ -105,7 +113,7 @@ ${truncatedText}
       return null;
     }
 
-    const systemPrompt = this.getSystemPrompt();
+    const systemPrompt = this.getSystemPrompt(searchConfig.custom_prompt);
     const userPrompt = this.formatUserPrompt(rawText, searchConfig, jobTitle, companyName);
 
     console.log(`[LlmService] Analyzing job "${jobTitle}" via provider "${config.provider}" (${config.model_name})`);
