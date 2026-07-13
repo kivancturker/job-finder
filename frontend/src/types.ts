@@ -35,7 +35,7 @@ export interface JobPosting {
 
 export interface LLMConfig {
   id: number;
-  provider: 'ollama' | 'openai' | 'anthropic';
+  provider: 'ollama' | 'openai' | 'anthropic' | 'openrouter';
   model_name: string;
   api_key: string | null;
   is_active: boolean;

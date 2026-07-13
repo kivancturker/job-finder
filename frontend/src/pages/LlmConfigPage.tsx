@@ -18,7 +18,7 @@ export default function LlmConfigPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Form State
-  const [provider, setProvider] = useState<'ollama' | 'openai' | 'anthropic'>('ollama');
+  const [provider, setProvider] = useState<'ollama' | 'openai' | 'anthropic' | 'openrouter'>('ollama');
   const [modelName, setModelName] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [isActive, setIsActive] = useState(false);
@@ -185,6 +185,7 @@ export default function LlmConfigPage() {
                 <option value="ollama">Ollama (Local / Offline)</option>
                 <option value="openai">OpenAI (GPT Models)</option>
                 <option value="anthropic">Anthropic (Claude Models)</option>
+                <option value="openrouter">OpenRouter (Any cloud model)</option>
               </select>
             </div>
 
@@ -300,7 +301,9 @@ export default function LlmConfigPage() {
                         ? 'bg-emerald-600/10 border-emerald-500/20 text-emerald-400' 
                         : cfg.provider === 'anthropic' 
                           ? 'bg-amber-600/10 border-amber-500/20 text-amber-400' 
-                          : 'bg-slate-600/10 border-slate-500/20 text-slate-400'
+                          : cfg.provider === 'openrouter'
+                            ? 'bg-violet-600/10 border-violet-500/20 text-violet-400'
+                            : 'bg-slate-600/10 border-slate-500/20 text-slate-400'
                     }`}>
                       {cfg.provider}
                     </span>

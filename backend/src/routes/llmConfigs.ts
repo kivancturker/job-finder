@@ -48,8 +48,8 @@ router.post('/', (req: Request, res: Response<ApiResponse<LLMConfig>>) => {
       return res.status(400).json({ success: false, error: 'Provider and model_name are required' });
     }
 
-    if (provider !== 'ollama' && provider !== 'openai' && provider !== 'anthropic') {
-      return res.status(400).json({ success: false, error: "Provider must be 'ollama', 'openai', or 'anthropic'" });
+    if (provider !== 'ollama' && provider !== 'openai' && provider !== 'anthropic' && provider !== 'openrouter') {
+      return res.status(400).json({ success: false, error: "Provider must be 'ollama', 'openai', 'anthropic', or 'openrouter'" });
     }
 
     const activeInt = is_active ? 1 : 0;
@@ -58,7 +58,7 @@ router.post('/', (req: Request, res: Response<ApiResponse<LLMConfig>>) => {
       'INSERT INTO llm_configs (provider, model_name, api_key, is_active) VALUES (?, ?, ?, ?)'
     );
     const result = stmt.run(provider, model_name, api_key || null, activeInt);
-    const newId = result.lastInsertRowid;
+    const newId = Number(result.lastInsertRowid);
 
     if (activeInt === 1) {
       activateConfigTransaction(newId);
@@ -86,8 +86,8 @@ router.put('/:id', (req: Request, res: Response<ApiResponse<LLMConfig>>) => {
       return res.status(400).json({ success: false, error: 'Provider and model_name are required' });
     }
 
-    if (provider !== 'ollama' && provider !== 'openai' && provider !== 'anthropic') {
-      return res.status(400).json({ success: false, error: "Provider must be 'ollama', 'openai', or 'anthropic'" });
+    if (provider !== 'ollama' && provider !== 'openai' && provider !== 'anthropic' && provider !== 'openrouter') {
+      return res.status(400).json({ success: false, error: "Provider must be 'ollama', 'openai', 'anthropic', or 'openrouter'" });
     }
 
     const activeInt = is_active ? 1 : 0;

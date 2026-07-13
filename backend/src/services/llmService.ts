@@ -165,7 +165,27 @@ ${truncatedText}
           },
           timeout: 30000
         });
-        responseText = res.data.content?.[0]?.text || '';
+      } else if (config.provider === 'openrouter') {
+        if (!config.api_key) {
+          throw new Error('API key is missing for OpenRouter provider');
+        }
+        const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: config.model_name,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.1,
+          response_format: { type: 'json_object' }
+        }, {
+          headers: { 
+            Authorization: `Bearer ${config.api_key}`,
+            'HTTP-Referer': 'http://localhost:3000',
+            'X-Title': 'DeepTech Job Radar'
+          },
+          timeout: 45000
+        });
+        responseText = res.data.choices?.[0]?.message?.content || '';
       } else {
         throw new Error(`Unsupported LLM provider: ${config.provider}`);
       }
