@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
-import queueService from '../services/queueService';
+import queueService, { QueueEvent } from '../services/queueService';
 import { ApiResponse } from '../types';
 
 const router = Router();
@@ -57,6 +57,52 @@ router.get('/queue', (req: Request, res: Response<ApiResponse<any>>) => {
     res.json({
       success: true,
       data: {
+        tasks: queueService.getQueue()
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/run-search/sse - Server-Sent Events stream for queue updates
+router.get('/sse', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  // Establish connection immediately
+  res.flushHeaders();
+
+  // Send initial state
+  const initialData = {
+    type: 'initial',
+    queue: queueService.getQueue()
+  };
+  res.write(`data: ${JSON.stringify(initialData)}\n\n`);
+
+  // Define listener to broadcast real-time events
+  const listener = (event: QueueEvent) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+
+  queueService.addListener(listener);
+
+  // Clean up on disconnect
+  req.on('close', () => {
+    queueService.removeListener(listener);
+    res.end();
+  });
+});
+
+// POST /api/run-search/clear - Clear completed and failed tasks from queue
+router.post('/clear', (req: Request, res: Response<ApiResponse<any>>) => {
+  try {
+    queueService.clearCompleted();
+    res.json({
+      success: true,
+      data: {
+        message: 'Successfully cleared finished tasks.',
         tasks: queueService.getQueue()
       }
     });

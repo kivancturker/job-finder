@@ -12,7 +12,11 @@ export interface QueueItem {
   error?: string;
 }
 
-type QueueListener = (item: QueueItem) => void;
+export type QueueEvent = 
+  | { type: 'update'; task: QueueItem }
+  | { type: 'clear'; queue: QueueItem[] };
+
+type QueueListener = (event: QueueEvent) => void;
 
 class QueueService {
   private queue: QueueItem[] = [];
@@ -29,9 +33,10 @@ class QueueService {
   }
 
   private notify(item: QueueItem) {
+    const event: QueueEvent = { type: 'update', task: item };
     for (const listener of this.listeners) {
       try {
-        listener(item);
+        listener(event);
       } catch (err) {
         console.error('Error in QueueService listener:', err);
       }
@@ -100,6 +105,16 @@ class QueueService {
 
   public clearCompleted() {
     this.queue = this.queue.filter(item => item.status !== 'completed' && item.status !== 'failed');
+    
+    // Notify all active listeners of the clear event
+    const event: QueueEvent = { type: 'clear', queue: this.queue };
+    for (const listener of this.listeners) {
+      try {
+        listener(event);
+      } catch (err) {
+        console.error('Error in QueueService clear listener:', err);
+      }
+    }
   }
 }
 

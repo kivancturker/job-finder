@@ -31,6 +31,6 @@ Once complete leave a checkmark.
 - [x] Build the **Job Description Page**: Render the raw text, LLM summary, and tech stack tags. Mark `is_visited = true` on load.
 
 ## Phase 6: Real-time Task Queue UI
-- [ ] Implement Server-Sent Events (SSE) on the backend to broadcast Queue state.
-- [ ] Build the **Task Queue Page**: Render a list of tasks. Green for completed, Orange for processing, Slate Gray for pending.
-- [ ] Implement the "Start Job Search" modal in the sidebar.
+- [x] Implement Server-Sent Events (SSE) on the backend to broadcast Queue state.
+- [x] Build the **Task Queue Page**: Render a list of tasks. Green for completed, Orange for processing, Slate Gray for pending.
+- [x] Implement the "Start Job Search" modal in the sidebar.
