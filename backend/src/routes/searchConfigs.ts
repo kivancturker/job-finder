@@ -1,19 +1,10 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
 import { SearchConfigRow, ApiResponse, SearchConfig } from '../types';
+import { mapSearchConfig, mapJobPosting } from '../mappers';
+import { validateKeywordsArray } from '../utils/validators';
 
 const router = Router();
-
-// Helper to map DB row to API model
-const mapSearchConfig = (row: SearchConfigRow): SearchConfig => ({
-  id: row.id,
-  name: row.name,
-  keywords: JSON.parse(row.keywords),
-  negative_keywords: row.negative_keywords ? JSON.parse(row.negative_keywords) : null,
-  min_experience: row.min_experience,
-  target_countries: row.target_countries ? JSON.parse(row.target_countries) : null,
-  created_at: row.created_at
-});
 
 // GET /api/search_configs - List all strategies
 router.get('/', (req: Request, res: Response<ApiResponse<SearchConfig[]>>) => {
@@ -47,8 +38,10 @@ router.post('/', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
       return res.status(400).json({ success: false, error: 'Strategy name is required' });
     }
 
-    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
-      return res.status(400).json({ success: false, error: 'Keywords must be a non-empty array of strings' });
+    try {
+      validateKeywordsArray(keywords);
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message });
     }
 
     const keywordsStr = JSON.stringify(keywords);
@@ -86,8 +79,10 @@ router.put('/:id', (req: Request, res: Response<ApiResponse<SearchConfig>>) => {
       return res.status(400).json({ success: false, error: 'Strategy name is required' });
     }
 
-    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
-      return res.status(400).json({ success: false, error: 'Keywords must be a non-empty array of strings' });
+    try {
+      validateKeywordsArray(keywords);
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message });
     }
 
     const keywordsStr = JSON.stringify(keywords);
@@ -147,21 +142,7 @@ router.get('/:id/jobs', (req: Request, res: Response<ApiResponse<any[]>>) => {
     `).all(id) as any[];
 
     // Map rows to parse JSON and properly convert booleans
-    const mappedJobs = jobs.map(job => ({
-      id: job.id,
-      company_id: job.company_id,
-      company_name: job.company_name,
-      search_config_id: job.search_config_id,
-      title: job.title,
-      url: job.url,
-      raw_text: job.raw_text,
-      is_relevant: Boolean(job.is_relevant),
-      ai_parsed: Boolean(job.ai_parsed),
-      ai_summary: job.ai_summary,
-      tech_stack: job.tech_stack ? JSON.parse(job.tech_stack) : null,
-      is_visited: Boolean(job.is_visited),
-      created_at: job.created_at
-    }));
+    const mappedJobs = jobs.map(mapJobPosting);
 
     res.json({ success: true, data: mappedJobs });
   } catch (error: any) {

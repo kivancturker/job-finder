@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Play, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 
@@ -7,11 +7,8 @@ interface StartSearchModalProps {
   onClose: () => void;
 }
 
-interface SearchConfig {
-  id: number;
-  name: string;
-  keywords: string[];
-}
+import type { SearchConfig } from '../types';
+import { api } from '../api';
 
 export default function StartSearchModal({ isOpen, onClose }: StartSearchModalProps) {
   const navigate = useNavigate();
@@ -25,19 +22,11 @@ export default function StartSearchModal({ isOpen, onClose }: StartSearchModalPr
     if (isOpen) {
       setFetching(true);
       setError(null);
-      fetch('/api/search_configs')
-        .then((res) => {
-          if (!res.ok) throw new Error('Failed to fetch search configurations');
-          return res.json();
-        })
+      api.searchConfigs.list()
         .then((data) => {
-          if (data.success && Array.isArray(data.data)) {
-            setConfigs(data.data);
-            if (data.data.length > 0) {
-              setSelectedConfigId(data.data[0].id);
-            }
-          } else {
-            throw new Error(data.error || 'Invalid configuration list');
+          setConfigs(data);
+          if (data.length > 0) {
+            setSelectedConfigId(data[0].id);
           }
         })
         .catch((err) => {
@@ -59,19 +48,7 @@ export default function StartSearchModal({ isOpen, onClose }: StartSearchModalPr
     setError(null);
 
     try {
-      const response = await fetch('/api/run-search', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ search_config_id: Number(selectedConfigId) }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to start job search');
-      }
+      await api.runSearch.start(selectedConfigId);
 
       onClose();
       navigate('/queue');

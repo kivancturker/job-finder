@@ -6,7 +6,10 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "test:api": "ts-node-dev --transpile-only tests/test_api.ts",
+    "test:queue": "ts-node-dev --transpile-only tests/test_queue.ts",
+    "test:ai": "ts-node-dev --transpile-only tests/test_ai_pipeline.ts"
   },
   "dependencies": {
     "axios": "^1.7.2",

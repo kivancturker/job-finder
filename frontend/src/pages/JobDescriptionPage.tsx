@@ -12,7 +12,8 @@ import {
   Code, 
   AlignLeft 
 } from 'lucide-react';
-import type { JobPosting, ApiResponse } from '../types';
+import type { JobPosting } from '../types';
+import { api } from '../api';
 
 export default function JobDescriptionPage() {
   const { id } = useParams();
@@ -36,19 +37,13 @@ export default function JobDescriptionPage() {
       
       try {
         // 1. Mark as visited
-        fetch(`/api/jobs/${id}/visit`, { method: 'PUT' }).catch((err) => 
+        api.jobs.markVisited(id).catch((err) => 
           console.error('Failed to mark job as visited:', err)
         );
 
         // 2. Fetch details
-        const response = await fetch(`/api/jobs/${id}`);
-        const result: ApiResponse<JobPosting & { company_name?: string }> = await response.json();
-        
-        if (result.success && result.data) {
-          setJob(result.data);
-        } else {
-          throw new Error(result.error || 'Failed to fetch job details');
-        }
+        const data = await api.jobs.get(id);
+        setJob(data);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -66,16 +61,8 @@ export default function JobDescriptionPage() {
     setEvalError(null);
 
     try {
-      const response = await fetch(`/api/jobs/${id}/evaluate`, {
-        method: 'POST',
-      });
-      const result: ApiResponse<JobPosting & { company_name?: string }> = await response.json();
-
-      if (result.success && result.data) {
-        setJob(result.data);
-      } else {
-        throw new Error(result.error || 'AI Evaluation failed. Make sure a provider is configured and active.');
-      }
+      const data = await api.jobs.evaluate(id);
+      setJob(data);
     } catch (err: any) {
       setEvalError(err.message);
     } finally {

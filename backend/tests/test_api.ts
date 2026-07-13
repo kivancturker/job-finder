@@ -1,4 +1,5 @@
-import { ApiResponse } from './types';
+import { ApiResponse } from '../src/types';
+import db from '../src/db/database';
 
 const BASE_URL = 'http://localhost:3001/api';
 
@@ -6,6 +7,11 @@ async function runTests() {
   console.log('🚀 Starting API Integration Tests...');
 
   try {
+    // Clear out any stale data before starting
+    db.prepare('DELETE FROM job_postings').run();
+    db.prepare('DELETE FROM companies').run();
+    db.prepare('DELETE FROM search_configs').run();
+    db.prepare('DELETE FROM llm_configs').run();
     // 1. Test Companies CRUD
     console.log('\n--- Testing Companies ---');
     

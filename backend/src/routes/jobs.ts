@@ -1,29 +1,13 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
-import { ApiResponse, JobPostingRow, SearchConfigRow, SearchConfig, CompanyRow } from '../types';
+import { ApiResponse, JobPostingRow, SearchConfigRow, SearchConfig, CompanyRow, JobPosting } from '../types';
+import { mapJobPosting, mapSearchConfig } from '../mappers';
 import { LlmService } from '../services/llmService';
 
 const router = Router();
 
-// Helper to map DB row to API model
-const mapJobPosting = (row: any): any => ({
-  id: row.id,
-  company_id: row.company_id,
-  company_name: row.company_name,
-  search_config_id: row.search_config_id,
-  title: row.title,
-  url: row.url,
-  raw_text: row.raw_text,
-  is_relevant: Boolean(row.is_relevant),
-  ai_parsed: Boolean(row.ai_parsed),
-  ai_summary: row.ai_summary,
-  tech_stack: row.tech_stack ? JSON.parse(row.tech_stack) : null,
-  is_visited: Boolean(row.is_visited),
-  created_at: row.created_at
-});
-
 // GET /api/jobs/:id - Get detailed job
-router.get('/:id', (req: Request, res: Response<ApiResponse<any>>) => {
+router.get('/:id', (req: Request, res: Response<ApiResponse<JobPosting & { company_name?: string }>>) => {
   try {
     const { id } = req.params;
     const row = db.prepare(`
@@ -31,7 +15,7 @@ router.get('/:id', (req: Request, res: Response<ApiResponse<any>>) => {
       FROM job_postings jp
       JOIN companies c ON jp.company_id = c.id
       WHERE jp.id = ?
-    `).get(id) as any | undefined;
+    `).get(id) as (JobPostingRow & { company_name?: string }) | undefined;
 
     if (!row) {
       return res.status(404).json({ success: false, error: 'Job posting not found' });
@@ -59,7 +43,7 @@ router.put('/:id/visit', (req: Request, res: Response<ApiResponse<{ id: number; 
 });
 
 // POST /api/jobs/:id/evaluate - Run LLM evaluation on a job description
-router.post('/:id/evaluate', async (req: Request, res: Response<ApiResponse<any>>) => {
+router.post('/:id/evaluate', async (req: Request, res: Response<ApiResponse<JobPosting & { company_name?: string }>>) => {
   try {
     const { id } = req.params;
 
@@ -74,15 +58,7 @@ router.post('/:id/evaluate', async (req: Request, res: Response<ApiResponse<any>
     if (!configRow) {
       return res.status(400).json({ success: false, error: 'Associated search config not found' });
     }
-    const searchConfig: SearchConfig = {
-      id: configRow.id,
-      name: configRow.name,
-      keywords: JSON.parse(configRow.keywords),
-      negative_keywords: configRow.negative_keywords ? JSON.parse(configRow.negative_keywords) : null,
-      min_experience: configRow.min_experience,
-      target_countries: configRow.target_countries ? JSON.parse(configRow.target_countries) : null,
-      created_at: configRow.created_at
-    };
+    const searchConfig = mapSearchConfig(configRow);
 
     // 3. Fetch company details
     const company = db.prepare('SELECT name FROM companies WHERE id = ?').get(job.company_id) as CompanyRow | undefined;
@@ -113,7 +89,7 @@ router.post('/:id/evaluate', async (req: Request, res: Response<ApiResponse<any>
       FROM job_postings jp
       JOIN companies c ON jp.company_id = c.id
       WHERE jp.id = ?
-    `).get(id) as any;
+    `).get(id) as JobPostingRow & { company_name?: string };
 
     res.json({ success: true, data: mapJobPosting(updatedJob) });
   } catch (error: any) {

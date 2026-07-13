@@ -9,6 +9,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import StartSearchModal from './StartSearchModal';
+import { api } from '../api';
 
 export default function Layout() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,11 +18,8 @@ export default function Layout() {
 
   useEffect(() => {
     // Check backend connection health
-    fetch('/api/companies')
-      .then((res) => {
-        if (res.ok) setIsConnected(true);
-        else setIsConnected(false);
-      })
+    api.health.check()
+      .then(() => setIsConnected(true))
       .catch(() => setIsConnected(false));
   }, [location.pathname]); // Re-check on nav actions as a simple keep-alive
 

@@ -1,4 +1,5 @@
 import { scrapeCompany } from './scraperService';
+import { QUEUE_DELAY_MS } from '../constants';
 
 export interface QueueItem {
   id: string;
@@ -99,7 +100,7 @@ class QueueService {
       // Delay briefly between tasks (e.g. 1 second) to be gentle
       setTimeout(() => {
         this.processNext();
-      }, 1000);
+      }, QUEUE_DELAY_MS);
     }
   }
 

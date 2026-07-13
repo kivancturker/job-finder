@@ -46,3 +46,15 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+export interface QueueItem {
+  id: string;
+  type: 'scrape' | 'parse';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  companyId: number;
+  companyName: string;
+  searchConfigId: number;
+  createdAt: string;
+  updatedAt: string;
+  error?: string;
+}

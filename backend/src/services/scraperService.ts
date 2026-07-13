@@ -3,6 +3,8 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import db from '../db/database';
 import { CompanyRow, SearchConfigRow, SearchConfig } from '../types';
+import { mapSearchConfig } from '../mappers';
+import { USER_AGENT, MAX_NEW_POSTINGS_PER_RUN, SCRAPE_DELAY_MS } from '../constants';
 import { matchKeywords } from './filterEngine';
 import { LlmService } from './llmService';
 
@@ -55,7 +57,7 @@ function cleanHtmlText(html: string): string {
 async function scrapeWithCheerio(url: string, targetSelector: string | null): Promise<{ title: string; url: string }[]> {
   const response = await axios.get(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'User-Agent': USER_AGENT
     },
     timeout: 10000
   });
@@ -95,7 +97,7 @@ async function scrapeWithPlaywright(url: string, targetSelector: string | null):
   try {
     const page = await browser.newPage();
     await page.setExtraHTTPHeaders({
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'User-Agent': USER_AGENT
     });
     
     // 30 seconds limit to load the page
@@ -146,7 +148,7 @@ async function fetchJobDetails(url: string): Promise<string> {
   try {
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': USER_AGENT
       },
       timeout: 10000
     });
@@ -177,15 +179,7 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
   if (!configRow) {
     throw new Error(`Search config with id ${searchConfigId} not found`);
   }
-  const searchConfig: SearchConfig = {
-    id: configRow.id,
-    name: configRow.name,
-    keywords: JSON.parse(configRow.keywords),
-    negative_keywords: configRow.negative_keywords ? JSON.parse(configRow.negative_keywords) : null,
-    min_experience: configRow.min_experience,
-    target_countries: configRow.target_countries ? JSON.parse(configRow.target_countries) : null,
-    created_at: configRow.created_at
-  };
+  const searchConfig = mapSearchConfig(configRow);
 
   console.log(`[ScraperService] Starting scrape for ${company.name} (${company.career_url})`);
 
@@ -220,9 +214,9 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
 
   console.log(`[ScraperService] Deduplicated to ${uniqueListingsMap.size} unique candidate links for ${company.name}`);
 
-  // Limit processing to maximum 20 new listings per company run to prevent API/resource exhaustion
+  // Limit processing to maximum postings limit per company run to prevent API/resource exhaustion
   let processedCount = 0;
-  const maxNewPostings = 20;
+  const maxNewPostings = MAX_NEW_POSTINGS_PER_RUN;
 
   const checkUrlStmt = db.prepare('SELECT id FROM job_postings WHERE url = ?');
   const insertJobStmt = db.prepare(`
@@ -304,7 +298,7 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
       processedCount++;
 
       // Be gentle, sleep briefly (e.g. 500ms)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, SCRAPE_DELAY_MS));
     } catch (err: any) {
       console.error(`[ScraperService] Failed to process job details for ${url}:`, err.message);
     }

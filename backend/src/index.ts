@@ -30,6 +30,16 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'DeepTech Job Radar Backend' });
 });
 
+app.get('/api/health', (req: Request, res: Response) => {
+  res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
+});
+
+// Global error handler middleware
+app.use((err: Error, _req: Request, res: Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ success: false, error: err.message || 'Internal server error' });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Backend server is running on http://localhost:${PORT}`);

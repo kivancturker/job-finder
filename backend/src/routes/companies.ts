@@ -1,18 +1,10 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
 import { CompanyRow, ApiResponse, Company } from '../types';
+import { mapCompany } from '../mappers';
+import { validateUrl, validateScraperEngine } from '../utils/validators';
 
 const router = Router();
-
-// Helper to map DB row to API model
-const mapCompany = (row: CompanyRow): Company => ({
-  id: row.id,
-  name: row.name,
-  career_url: row.career_url,
-  scraper_engine: row.scraper_engine,
-  target_selector: row.target_selector,
-  created_at: row.created_at
-});
 
 // GET /api/companies - List all
 router.get('/', (req: Request, res: Response<ApiResponse<Company[]>>) => {
@@ -45,16 +37,12 @@ router.post('/', (req: Request, res: Response<ApiResponse<Company>>) => {
       return res.status(400).json({ success: false, error: 'Name and career_url are required' });
     }
 
-    // URL verification
-    try {
-      new URL(career_url);
-    } catch {
-      return res.status(400).json({ success: false, error: 'Invalid career page URL' });
-    }
-
     const engine = scraper_engine || 'cheerio';
-    if (engine !== 'cheerio' && engine !== 'playwright') {
-      return res.status(400).json({ success: false, error: "scraper_engine must be 'cheerio' or 'playwright'" });
+    try {
+      validateUrl(career_url);
+      validateScraperEngine(engine);
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message });
     }
 
     const stmt = db.prepare(
@@ -87,15 +75,12 @@ router.put('/:id', (req: Request, res: Response<ApiResponse<Company>>) => {
       return res.status(400).json({ success: false, error: 'Name and career_url are required' });
     }
 
-    try {
-      new URL(career_url);
-    } catch {
-      return res.status(400).json({ success: false, error: 'Invalid career page URL' });
-    }
-
     const engine = scraper_engine || 'cheerio';
-    if (engine !== 'cheerio' && engine !== 'playwright') {
-      return res.status(400).json({ success: false, error: "scraper_engine must be 'cheerio' or 'playwright'" });
+    try {
+      validateUrl(career_url);
+      validateScraperEngine(engine);
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message });
     }
 
     const stmt = db.prepare(

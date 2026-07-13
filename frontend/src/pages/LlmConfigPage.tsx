@@ -10,7 +10,8 @@ import {
   Check, 
   Settings 
 } from 'lucide-react';
-import type { LLMConfig, ApiResponse } from '../types';
+import type { LLMConfig } from '../types';
+import { api } from '../api';
 
 export default function LlmConfigPage() {
   const [configs, setConfigs] = useState<LLMConfig[]>([]);
@@ -31,13 +32,8 @@ export default function LlmConfigPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/llm_configs');
-      const result: ApiResponse<LLMConfig[]> = await response.json();
-      if (result.success && result.data) {
-        setConfigs(result.data);
-      } else {
-        throw new Error(result.error || 'Failed to fetch LLM configurations');
-      }
+      const data = await api.llmConfigs.list();
+      setConfigs(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -72,24 +68,11 @@ export default function LlmConfigPage() {
     };
 
     try {
-      const response = await fetch('/api/llm_configs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result: ApiResponse<LLMConfig> = await response.json();
-
-      if (result.success) {
-        setModelName('');
-        setApiKey('');
-        setIsActive(false);
-        fetchConfigs();
-      } else {
-        throw new Error(result.error || 'Failed to create configuration');
-      }
+      await api.llmConfigs.create(payload);
+      setModelName('');
+      setApiKey('');
+      setIsActive(false);
+      fetchConfigs();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -100,21 +83,14 @@ export default function LlmConfigPage() {
   const handleActivate = async (id: number) => {
     setActionId(id);
     try {
-      const response = await fetch(`/api/llm_configs/${id}/activate`, {
-        method: 'POST',
-      });
-      const result: ApiResponse<LLMConfig> = await response.json();
-      if (result.success) {
-        // Toggle active status in local state
-        setConfigs((prev) => 
-          prev.map((c) => ({
-            ...c,
-            is_active: c.id === id,
-          }))
-        );
-      } else {
-        throw new Error(result.error || 'Failed to activate configuration');
-      }
+      await api.llmConfigs.activate(id);
+      // Toggle active status in local state
+      setConfigs((prev) => 
+        prev.map((c) => ({
+          ...c,
+          is_active: c.id === id,
+        }))
+      );
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -126,15 +102,8 @@ export default function LlmConfigPage() {
     if (!confirm('Are you sure you want to delete this AI configuration?')) return;
     setActionId(id);
     try {
-      const response = await fetch(`/api/llm_configs/${id}`, {
-        method: 'DELETE',
-      });
-      const result: ApiResponse<{ id: number }> = await response.json();
-      if (result.success) {
-        setConfigs((prev) => prev.filter((c) => c.id !== id));
-      } else {
-        throw new Error(result.error || 'Failed to delete configuration');
-      }
+      await api.llmConfigs.remove(id);
+      setConfigs((prev) => prev.filter((c) => c.id !== id));
     } catch (err: any) {
       alert(err.message);
     } finally {

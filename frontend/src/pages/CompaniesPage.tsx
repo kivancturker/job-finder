@@ -11,7 +11,8 @@ import {
   Check, 
   X 
 } from 'lucide-react';
-import type { Company, ApiResponse } from '../types';
+import type { Company } from '../types';
+import { api } from '../api';
 
 export default function CompaniesPage() {
   const navigate = useNavigate();
@@ -25,13 +26,8 @@ export default function CompaniesPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/companies');
-      const result: ApiResponse<Company[]> = await response.json();
-      if (result.success && result.data) {
-        setCompanies(result.data);
-      } else {
-        throw new Error(result.error || 'Failed to fetch companies');
-      }
+      const data = await api.companies.list();
+      setCompanies(data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -46,16 +42,9 @@ export default function CompaniesPage() {
   const handleDelete = async (id: number) => {
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/companies/${id}`, {
-        method: 'DELETE',
-      });
-      const result: ApiResponse<{ id: number }> = await response.json();
-      if (result.success) {
-        setCompanies((prev) => prev.filter((c) => c.id !== id));
-        setDeletingId(null);
-      } else {
-        throw new Error(result.error || 'Failed to delete company');
-      }
+      await api.companies.remove(id);
+      setCompanies((prev) => prev.filter((c) => c.id !== id));
+      setDeletingId(null);
     } catch (err: any) {
       alert(err.message);
     } finally {

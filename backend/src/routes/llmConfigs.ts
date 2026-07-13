@@ -1,22 +1,39 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database';
 import { LLMConfigRow, ApiResponse, LLMConfig } from '../types';
+import { mapLLMConfig } from '../mappers';
+import { validateLlmProvider } from '../utils/validators';
 
 const router = Router();
-
-// Helper to map DB row to API model
-const mapLLMConfig = (row: LLMConfigRow): LLMConfig => ({
-  id: row.id,
-  provider: row.provider,
-  model_name: row.model_name,
-  api_key: row.api_key,
-  is_active: Boolean(row.is_active)
-});
 
 // Transaction to activate one configuration and deactivate all others
 const activateConfigTransaction = db.transaction((id: number | string) => {
   db.prepare('UPDATE llm_configs SET is_active = 0').run();
   db.prepare('UPDATE llm_configs SET is_active = 1 WHERE id = ?').run(id);
+});
+
+// Transaction to atomically create configuration and optional activation
+const createConfigTransaction = db.transaction((provider: string, model_name: string, api_key: string | null, activeInt: number) => {
+  const result = db.prepare(
+    'INSERT INTO llm_configs (provider, model_name, api_key, is_active) VALUES (?, ?, ?, 0)'
+  ).run(provider, model_name, api_key);
+  const newId = Number(result.lastInsertRowid);
+  if (activeInt === 1) {
+    db.prepare('UPDATE llm_configs SET is_active = 0').run();
+    db.prepare('UPDATE llm_configs SET is_active = 1 WHERE id = ?').run(newId);
+  }
+  return newId;
+});
+
+// Transaction to atomically update configuration and optional activation
+const updateConfigTransaction = db.transaction((provider: string, model_name: string, api_key: string | null, activeInt: number, id: number | string) => {
+  db.prepare(
+    'UPDATE llm_configs SET provider = ?, model_name = ?, api_key = ?, is_active = 0 WHERE id = ?'
+  ).run(provider, model_name, api_key, id);
+  if (activeInt === 1) {
+    db.prepare('UPDATE llm_configs SET is_active = 0').run();
+    db.prepare('UPDATE llm_configs SET is_active = 1 WHERE id = ?').run(id);
+  }
 });
 
 // GET /api/llm_configs - Get all configurations
@@ -48,21 +65,15 @@ router.post('/', (req: Request, res: Response<ApiResponse<LLMConfig>>) => {
       return res.status(400).json({ success: false, error: 'Provider and model_name are required' });
     }
 
-    if (provider !== 'ollama' && provider !== 'openai' && provider !== 'anthropic' && provider !== 'openrouter') {
-      return res.status(400).json({ success: false, error: "Provider must be 'ollama', 'openai', 'anthropic', or 'openrouter'" });
+    try {
+      validateLlmProvider(provider);
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message });
     }
 
     const activeInt = is_active ? 1 : 0;
 
-    const stmt = db.prepare(
-      'INSERT INTO llm_configs (provider, model_name, api_key, is_active) VALUES (?, ?, ?, ?)'
-    );
-    const result = stmt.run(provider, model_name, api_key || null, activeInt);
-    const newId = Number(result.lastInsertRowid);
-
-    if (activeInt === 1) {
-      activateConfigTransaction(newId);
-    }
+    const newId = createConfigTransaction(provider, model_name, api_key || null, activeInt);
 
     const newRow = db.prepare('SELECT * FROM llm_configs WHERE id = ?').get(newId) as LLMConfigRow;
     res.status(201).json({ success: true, data: mapLLMConfig(newRow) });
@@ -86,20 +97,15 @@ router.put('/:id', (req: Request, res: Response<ApiResponse<LLMConfig>>) => {
       return res.status(400).json({ success: false, error: 'Provider and model_name are required' });
     }
 
-    if (provider !== 'ollama' && provider !== 'openai' && provider !== 'anthropic' && provider !== 'openrouter') {
-      return res.status(400).json({ success: false, error: "Provider must be 'ollama', 'openai', 'anthropic', or 'openrouter'" });
+    try {
+      validateLlmProvider(provider);
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message });
     }
 
     const activeInt = is_active ? 1 : 0;
 
-    const stmt = db.prepare(
-      'UPDATE llm_configs SET provider = ?, model_name = ?, api_key = ?, is_active = ? WHERE id = ?'
-    );
-    stmt.run(provider, model_name, api_key || null, activeInt, id);
-
-    if (activeInt === 1) {
-      activateConfigTransaction(id);
-    }
+    updateConfigTransaction(provider, model_name, api_key || null, activeInt, id);
 
     const updatedRow = db.prepare('SELECT * FROM llm_configs WHERE id = ?').get(id) as LLMConfigRow;
     res.json({ success: true, data: mapLLMConfig(updatedRow) });

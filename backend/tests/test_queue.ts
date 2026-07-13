@@ -1,6 +1,6 @@
 import mockServer from './test_scraper_server';
-import db from './db/database';
-import { ApiResponse } from './types';
+import db from '../src/db/database';
+import { ApiResponse } from '../src/types';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 

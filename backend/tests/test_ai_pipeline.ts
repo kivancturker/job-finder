@@ -1,7 +1,7 @@
 import express from 'express';
 import mockScraperServer from './test_scraper_server';
-import db from './db/database';
-import { ApiResponse } from './types';
+import db from '../src/db/database';
+import { ApiResponse } from '../src/types';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -75,6 +75,11 @@ async function runAIPipelineTests() {
   console.log('\n🚀 Starting AI Evaluation Pipeline Integration Tests...');
 
   try {
+    // Clear out any stale data before starting
+    db.prepare('DELETE FROM job_postings').run();
+    db.prepare('DELETE FROM companies').run();
+    db.prepare('DELETE FROM search_configs').run();
+
     // 1. Create a search configuration to trigger search against
     const configRes = await fetch(`${API_BASE_URL}/search_configs`, {
       method: 'POST',

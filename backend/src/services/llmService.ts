@@ -1,6 +1,7 @@
 import axios from 'axios';
 import db from '../db/database';
 import { LLMConfigRow, SearchConfig } from '../types';
+import { LLM_TIMEOUT_MS, RAW_TEXT_TRUNCATION_LIMIT } from '../constants';
 
 export interface AIAnalysisResult {
   is_relevant: boolean;
@@ -67,9 +68,9 @@ REQUIRED JSON SCHEMA:
     jobTitle: string,
     companyName: string
   ): string {
-    // Truncate raw job description text to avoid token overflows (approx 12,000 characters limit)
-    const truncatedText = rawText.length > 12000 
-      ? rawText.substring(0, 12000) + '\n... [truncated due to length] ...'
+    // Truncate raw job description text to avoid token overflows
+    const truncatedText = rawText.length > RAW_TEXT_TRUNCATION_LIMIT 
+      ? rawText.substring(0, RAW_TEXT_TRUNCATION_LIMIT) + '\n... [truncated due to length] ...'
       : rawText;
 
     return `Target Search Strategy: "${searchConfig.name}"
@@ -124,7 +125,7 @@ ${truncatedText}
           options: {
             temperature: 0.1
           }
-        }, { timeout: 45000 });
+        }, { timeout: LLM_TIMEOUT_MS.ollama });
         responseText = res.data.message?.content || '';
 
       } else if (config.provider === 'openai') {
@@ -141,7 +142,7 @@ ${truncatedText}
           response_format: { type: 'json_object' }
         }, {
           headers: { Authorization: `Bearer ${config.api_key}` },
-          timeout: 30000
+          timeout: LLM_TIMEOUT_MS.openai
         });
         responseText = res.data.choices?.[0]?.message?.content || '';
 
@@ -163,8 +164,9 @@ ${truncatedText}
             'anthropic-version': '2023-06-01',
             'content-type': 'application/json'
           },
-          timeout: 30000
+          timeout: LLM_TIMEOUT_MS.anthropic
         });
+        responseText = res.data?.content?.[0]?.text || '';
       } else if (config.provider === 'openrouter') {
         if (!config.api_key) {
           throw new Error('API key is missing for OpenRouter provider');
@@ -183,7 +185,7 @@ ${truncatedText}
             'HTTP-Referer': 'http://localhost:3000',
             'X-Title': 'DeepTech Job Radar'
           },
-          timeout: 45000
+          timeout: LLM_TIMEOUT_MS.openrouter
         });
         responseText = res.data.choices?.[0]?.message?.content || '';
       } else {

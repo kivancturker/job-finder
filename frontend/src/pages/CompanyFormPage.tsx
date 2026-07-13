@@ -9,7 +9,7 @@ import {
   Cpu, 
   Tag 
 } from 'lucide-react';
-import type { Company, ApiResponse } from '../types';
+import { api } from '../api';
 
 export default function CompanyFormPage() {
   const { id } = useParams();
@@ -31,16 +31,11 @@ export default function CompanyFormPage() {
         setFetching(true);
         setError(null);
         try {
-          const response = await fetch(`/api/companies/${id}`);
-          const result: ApiResponse<Company> = await response.json();
-          if (result.success && result.data) {
-            setName(result.data.name);
-            setCareerUrl(result.data.career_url);
-            setScraperEngine(result.data.scraper_engine);
-            setTargetSelector(result.data.target_selector || '');
-          } else {
-            throw new Error(result.error || 'Failed to load company details');
-          }
+          const data = await api.companies.get(id);
+          setName(data.name);
+          setCareerUrl(data.career_url);
+          setScraperEngine(data.scraper_engine);
+          setTargetSelector(data.target_selector || '');
         } catch (err: any) {
           setError(err.message);
         } finally {
@@ -77,24 +72,12 @@ export default function CompanyFormPage() {
     };
 
     try {
-      const url = isEdit ? `/api/companies/${id}` : '/api/companies';
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result: ApiResponse<Company> = await response.json();
-
-      if (result.success) {
-        navigate('/companies');
+      if (isEdit) {
+        await api.companies.update(id, payload);
       } else {
-        throw new Error(result.error || 'Failed to save company');
+        await api.companies.create(payload);
       }
+      navigate('/companies');
     } catch (err: any) {
       setError(err.message);
     } finally {
