@@ -24,11 +24,11 @@ Once complete leave a checkmark.
 - [x] Setup React Router to handle the different right-pane views.
 
 ## Phase 5: Building the Views (Right Pane)
-- [ ] Build the **Companies Page**: List view with Edit/Delete buttons.
-- [ ] Build the **Company Form Page**: Add/Edit company details.
-- [ ] Build the **LLM Config Page**: Form for provider, model, API key.
-- [ ] Build the **Search Config Page**: CRUD for search strategies, plus a list of matching `job_postings` for each strategy.
-- [ ] Build the **Job Description Page**: Render the raw text, LLM summary, and tech stack tags. Mark `is_visited = true` on load.
+- [x] Build the **Companies Page**: List view with Edit/Delete buttons.
+- [x] Build the **Company Form Page**: Add/Edit company details.
+- [x] Build the **LLM Config Page**: Form for provider, model, API key.
+- [x] Build the **Search Config Page**: CRUD for search strategies, plus a list of matching `job_postings` for each strategy.
+- [x] Build the **Job Description Page**: Render the raw text, LLM summary, and tech stack tags. Mark `is_visited = true` on load.
 
 ## Phase 6: Real-time Task Queue UI
 - [ ] Implement Server-Sent Events (SSE) on the backend to broadcast Queue state.
