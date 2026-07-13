@@ -7,13 +7,15 @@ interface StartSearchModalProps {
   onClose: () => void;
 }
 
-import type { SearchConfig } from '../types';
+import type { SearchConfig, LLMConfig } from '../types';
 import { api } from '../api';
 
 export default function StartSearchModal({ isOpen, onClose }: StartSearchModalProps) {
   const navigate = useNavigate();
   const [configs, setConfigs] = useState<SearchConfig[]>([]);
   const [selectedConfigId, setSelectedConfigId] = useState<number | ''>('');
+  const [companiesCount, setCompaniesCount] = useState<number>(0);
+  const [activeLlm, setActiveLlm] = useState<LLMConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +24,18 @@ export default function StartSearchModal({ isOpen, onClose }: StartSearchModalPr
     if (isOpen) {
       setFetching(true);
       setError(null);
-      api.searchConfigs.list()
-        .then((data) => {
-          setConfigs(data);
-          if (data.length > 0) {
-            setSelectedConfigId(data[0].id);
+      Promise.all([
+        api.searchConfigs.list(),
+        api.companies.list(),
+        api.llmConfigs.getActive()
+      ])
+        .then(([configsData, companiesData, activeLlmData]) => {
+          setConfigs(configsData);
+          setCompaniesCount(companiesData.length);
+          setActiveLlm(activeLlmData);
+          
+          if (configsData.length > 0) {
+            setSelectedConfigId(configsData[0].id);
           }
         })
         .catch((err) => {
@@ -59,6 +68,8 @@ export default function StartSearchModal({ isOpen, onClose }: StartSearchModalPr
     }
   };
 
+  const hasMissingRequirements = companiesCount === 0 || !activeLlm || configs.length === 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop blur overlay */}
@@ -88,7 +99,7 @@ export default function StartSearchModal({ isOpen, onClose }: StartSearchModalPr
         {fetching ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="animate-spin text-indigo-500" size={32} />
-            <span className="text-gray-400 text-sm">Loading strategies...</span>
+            <span className="text-gray-400 text-sm">Validating system readiness...</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -101,19 +112,90 @@ export default function StartSearchModal({ isOpen, onClose }: StartSearchModalPr
               </div>
             )}
 
-            {configs.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-gray-400 text-sm mb-4">No search configurations found. You need to create a strategy first.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    navigate('/search-configs');
-                  }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-all"
-                >
-                  Create Strategy
-                </button>
+            {hasMissingRequirements ? (
+              <div className="space-y-4 py-2">
+                <p className="text-gray-450 text-xs font-semibold uppercase tracking-wider">
+                  Prerequisites Required to Proceed
+                </p>
+
+                {/* Company check warning */}
+                {companiesCount === 0 && (
+                  <div className="p-4 bg-rose-500/5 border border-rose-500/10 text-rose-400 rounded-xl text-sm flex flex-col gap-2.5 items-start">
+                    <div className="flex gap-2.5 items-center">
+                      <AlertCircle className="shrink-0 text-rose-500" size={16} />
+                      <span className="font-semibold text-white">No Registered Companies</span>
+                    </div>
+                    <p className="text-gray-400 text-xs">
+                      At least one company career page must be registered to run a scrape.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        navigate('/companies');
+                      }}
+                      className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer"
+                    >
+                      Add Companies
+                    </button>
+                  </div>
+                )}
+
+                {/* LLM config warning */}
+                {!activeLlm && (
+                  <div className="p-4 bg-rose-500/5 border border-rose-500/10 text-rose-400 rounded-xl text-sm flex flex-col gap-2.5 items-start">
+                    <div className="flex gap-2.5 items-center">
+                      <AlertCircle className="shrink-0 text-rose-500" size={16} />
+                      <span className="font-semibold text-white">No Active LLM Provider</span>
+                    </div>
+                    <p className="text-gray-400 text-xs">
+                      An active AI provider is required to evaluate scraper matches and construct tech stacks.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        navigate('/settings/llm');
+                      }}
+                      className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer"
+                    >
+                      Activate LLM Config
+                    </button>
+                  </div>
+                )}
+
+                {/* Strategy check warning */}
+                {configs.length === 0 && (
+                  <div className="p-4 bg-rose-500/5 border border-rose-500/10 text-rose-400 rounded-xl text-sm flex flex-col gap-2.5 items-start">
+                    <div className="flex gap-2.5 items-center">
+                      <AlertCircle className="shrink-0 text-rose-500" size={16} />
+                      <span className="font-semibold text-white">No Search Strategies</span>
+                    </div>
+                    <p className="text-gray-400 text-xs">
+                      You need to create at least one strategy containing target keywords and criteria.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        navigate('/search-configs');
+                      }}
+                      className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer"
+                    >
+                      Create Strategy
+                    </button>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-medium transition-all cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             ) : (
               <>

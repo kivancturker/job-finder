@@ -168,7 +168,12 @@ async function fetchJobDetails(url: string): Promise<string> {
 }
 
 // Main logic to scrape a company and save listings
-export async function scrapeCompany(companyId: number, searchConfigId: number): Promise<void> {
+// Main logic to scrape a company and save listings
+export async function scrapeCompany(
+  companyId: number, 
+  searchConfigId: number, 
+  onLog?: (msg: string) => void
+): Promise<void> {
   const company = db.prepare('SELECT * FROM companies WHERE id = ?').get(companyId) as CompanyRow | undefined;
   if (!company) {
     throw new Error(`Company with id ${companyId} not found`);
@@ -181,29 +186,50 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
   }
   const searchConfig = mapSearchConfig(configRow);
 
-  console.log(`[ScraperService] Starting scrape for ${company.name} (${company.career_url})`);
+  const log = (msg: string) => {
+    console.log(msg);
+    if (onLog) {
+      onLog(msg);
+    }
+  };
+
+  const logWarn = (msg: string) => {
+    console.warn(msg);
+    if (onLog) {
+      onLog(`[WARN] ${msg}`);
+    }
+  };
+
+  const logError = (msg: string) => {
+    console.error(msg);
+    if (onLog) {
+      onLog(`[ERROR] ${msg}`);
+    }
+  };
+
+  log(`Starting scrape for ${company.name} (${company.career_url})`);
 
   let listings: { title: string; url: string }[] = [];
 
   if (company.scraper_engine === 'cheerio') {
     try {
       listings = await scrapeWithCheerio(company.career_url, company.target_selector);
-      console.log(`[ScraperService] Cheerio found ${listings.length} candidate links for ${company.name}`);
+      log(`Cheerio found ${listings.length} candidate links for ${company.name}`);
       
       // Fallback to Playwright if cheerio returned 0 links (since JS might be required)
       if (listings.length === 0) {
-        console.log(`[ScraperService] 0 links found via Cheerio. Running Playwright fallback...`);
+        log(`0 links found via Cheerio. Running Playwright fallback...`);
         listings = await scrapeWithPlaywright(company.career_url, company.target_selector);
-        console.log(`[ScraperService] Playwright fallback found ${listings.length} links for ${company.name}`);
+        log(`Playwright fallback found ${listings.length} links for ${company.name}`);
       }
     } catch (err: any) {
-      console.warn(`[ScraperService] Cheerio failed: ${err.message}. Retrying with Playwright...`);
+      logWarn(`Cheerio failed: ${err.message}. Retrying with Playwright...`);
       listings = await scrapeWithPlaywright(company.career_url, company.target_selector);
     }
   } else {
     // Forced Playwright
     listings = await scrapeWithPlaywright(company.career_url, company.target_selector);
-    console.log(`[ScraperService] Forced Playwright found ${listings.length} links for ${company.name}`);
+    log(`Forced Playwright found ${listings.length} links for ${company.name}`);
   }
 
   // Deduplicate links on the page itself
@@ -212,7 +238,7 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
     uniqueListingsMap.set(item.url, item.title);
   }
 
-  console.log(`[ScraperService] Deduplicated to ${uniqueListingsMap.size} unique candidate links for ${company.name}`);
+  log(`Deduplicated to ${uniqueListingsMap.size} unique candidate links for ${company.name}`);
 
   // Limit processing to maximum postings limit per company run to prevent API/resource exhaustion
   let processedCount = 0;
@@ -226,7 +252,7 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
 
   for (const [url, title] of uniqueListingsMap.entries()) {
     if (processedCount >= maxNewPostings) {
-      console.log(`[ScraperService] Reached maximum new postings limit (${maxNewPostings}) for ${company.name}`);
+      log(`Reached maximum new postings limit (${maxNewPostings}) for ${company.name}`);
       break;
     }
 
@@ -238,13 +264,13 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
     }
 
     try {
-      console.log(`[ScraperService] Scraping new job description: ${title} (${url})`);
+      log(`Scraping new job description: ${title} (${url})`);
       
       // 2. Fetch job description
       const rawText = await fetchJobDetails(url);
       
       if (!rawText || rawText.length < 50) {
-        console.warn(`[ScraperService] Scraped text is empty or too short for ${url}, skipping`);
+        logWarn(`Scraped text is empty or too short for ${url}, skipping`);
         continue;
       }
 
@@ -256,12 +282,12 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
       let techStack = null;
 
       if (!passesFilter) {
-        console.log(`[ScraperService] Job "${title}" failed keyword pre-filter. Skipping LLM.`);
+        log(`Job "${title}" failed keyword pre-filter. Skipping LLM.`);
         isRelevant = 0;
         aiParsed = 1;
         aiSummary = 'Pre-filtered: Positive keywords did not match';
       } else {
-        console.log(`[ScraperService] Job "${title}" passed keyword pre-filter. Evaluating via LLM...`);
+        log(`Job "${title}" passed keyword pre-filter. Evaluating via LLM...`);
         try {
           const aiResult = await LlmService.analyzeJob(rawText, searchConfig, title, company.name);
           if (aiResult) {
@@ -269,14 +295,16 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
             aiParsed = 1;
             aiSummary = aiResult.ai_summary;
             techStack = JSON.stringify(aiResult.tech_stack);
+            log(`LLM analysis complete for "${title}". Fit: ${aiResult.is_relevant ? 'RELEVANT' : 'IRRELEVANT'}`);
           } else {
             // No active LLM configuration
             isRelevant = 1; // Temporarily mark as relevant since keyword match passed, but pending AI
             aiParsed = 0;
             aiSummary = 'Pending AI review';
+            logWarn(`No active LLM config. Job "${title}" marked as pending AI review.`);
           }
         } catch (llmErr: any) {
-          console.error(`[ScraperService] LLM evaluation failed: ${llmErr.message}`);
+          logError(`LLM evaluation failed: ${llmErr.message}`);
           isRelevant = 1;
           aiParsed = 0;
           aiSummary = `Failed LLM analysis: ${llmErr.message}`;
@@ -300,9 +328,9 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
       // Be gentle, sleep briefly (e.g. 500ms)
       await new Promise(resolve => setTimeout(resolve, SCRAPE_DELAY_MS));
     } catch (err: any) {
-      console.error(`[ScraperService] Failed to process job details for ${url}:`, err.message);
+      logError(`Failed to process job details for ${url}: ${err.message}`);
     }
   }
 
-  console.log(`[ScraperService] Finished scrape for ${company.name}. Added ${processedCount} new job posting(s).`);
+  log(`Finished scrape for ${company.name}. Added ${processedCount} new job posting(s).`);
 }

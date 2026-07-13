@@ -62,6 +62,21 @@ const schema = `
     api_key TEXT,
     is_active INTEGER DEFAULT 0 -- 0 = false, 1 = true
   );
+
+  CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL, -- 'scrape' | 'parse'
+    status TEXT NOT NULL, -- 'pending' | 'processing' | 'completed' | 'failed'
+    company_id INTEGER,
+    company_name TEXT,
+    search_config_id INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    error TEXT,
+    logs TEXT, -- JSON array of strings
+    FOREIGN KEY(company_id) REFERENCES companies(id) ON DELETE SET NULL,
+    FOREIGN KEY(search_config_id) REFERENCES search_configs(id) ON DELETE SET NULL
+  );
 `;
 
 // Run schema migration

@@ -204,4 +204,122 @@ ${truncatedText}
       throw err;
     }
   }
+
+  /**
+   * Tests the connection to an LLM provider using the supplied credentials and model.
+   * Returns a promise with status details and any error responses.
+   */
+  public static async testConnection(
+    provider: string,
+    modelName: string,
+    apiKey: string | null
+  ): Promise<{ success: boolean; message: string; details?: string }> {
+    const testPrompt = 'Respond with exactly the word "success" and nothing else.';
+    const timeoutMs = 15000; // 15 seconds timeout for testing
+
+    try {
+      let responseText = '';
+
+      if (provider === 'ollama') {
+        const baseUrl = apiKey || 'http://localhost:11434';
+        const res = await axios.post(`${baseUrl}/api/chat`, {
+          model: modelName,
+          messages: [
+            { role: 'user', content: testPrompt }
+          ],
+          stream: false,
+          options: {
+            temperature: 0.1
+          }
+        }, { timeout: timeoutMs });
+        responseText = res.data.message?.content || '';
+
+      } else if (provider === 'openai') {
+        if (!apiKey) {
+          throw new Error('API key is missing for OpenAI provider');
+        }
+        const res = await axios.post('https://api.openai.com/v1/chat/completions', {
+          model: modelName,
+          messages: [
+            { role: 'user', content: testPrompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 1000
+        }, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: timeoutMs
+        });
+        responseText = res.data.choices?.[0]?.message?.content || '';
+
+      } else if (provider === 'anthropic') {
+        if (!apiKey) {
+          throw new Error('API key is missing for Anthropic provider');
+        }
+        const res = await axios.post('https://api.anthropic.com/v1/messages', {
+          model: modelName,
+          messages: [
+            { role: 'user', content: testPrompt }
+          ],
+          max_tokens: 1000,
+          temperature: 0.1
+        }, {
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+          },
+          timeout: timeoutMs
+        });
+        responseText = res.data?.content?.[0]?.text || '';
+
+      } else if (provider === 'openrouter') {
+        if (!apiKey) {
+          throw new Error('API key is missing for OpenRouter provider');
+        }
+        const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: modelName,
+          messages: [
+            { role: 'user', content: testPrompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 1000
+        }, {
+          headers: { 
+            Authorization: `Bearer ${apiKey}`,
+            'HTTP-Referer': 'http://localhost:3000',
+            'X-Title': 'DeepTech Job Radar'
+          },
+          timeout: timeoutMs
+        });
+        responseText = res.data.choices?.[0]?.message?.content || '';
+      } else {
+        throw new Error(`Unsupported LLM provider: ${provider}`);
+      }
+
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Empty response received from LLM');
+      }
+
+      return {
+        success: true,
+        message: responseText.trim()
+      };
+
+    } catch (err: any) {
+      let details = err.message;
+      if (err.response) {
+        const status = err.response.status;
+        const data = typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : err.response.data;
+        details = `API error (HTTP ${status}): ${data}`;
+      } else if (err.request) {
+        details = 'No response received from the server. Check host network connectivity or provider settings.';
+      }
+      return {
+        success: false,
+        message: err.message || 'Connection failed',
+        details
+      };
+    }
+  }
 }
+

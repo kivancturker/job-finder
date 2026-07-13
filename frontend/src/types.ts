@@ -57,4 +57,5 @@ export interface QueueItem {
   createdAt: string;
   updatedAt: string;
   error?: string;
+  logs?: string[];
 }

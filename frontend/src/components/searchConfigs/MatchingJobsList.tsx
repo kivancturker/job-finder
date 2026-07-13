@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Briefcase, CheckCircle, HelpCircle, XCircle, Search } from 'lucide-react';
+import { Calendar, Briefcase, CheckCircle, HelpCircle, XCircle, Search, Brain, Loader2 } from 'lucide-react';
 import type { JobPosting, SearchConfig } from '../../types';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EmptyState from '../ui/EmptyState';
+import { api } from '../../api';
 
 interface MatchingJobsListProps {
   selectedConfig: SearchConfig;
@@ -18,6 +19,7 @@ export default function MatchingJobsList({
 }: MatchingJobsListProps) {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'relevant' | 'pre-match' | 'irrelevant'>('all');
+  const [analyzing, setAnalyzing] = useState(false);
 
   const filteredJobs = jobs.filter((job) => {
     if (filter === 'relevant') return job.ai_parsed && job.is_relevant;
@@ -25,6 +27,18 @@ export default function MatchingJobsList({
     if (filter === 'irrelevant') return !job.is_relevant;
     return true;
   });
+
+  const handleAnalyzePreMatches = async () => {
+    setAnalyzing(true);
+    try {
+      await api.runSearch.analyzePreMatches();
+      navigate('/queue');
+    } catch (err: any) {
+      alert(err.message || 'Failed to start AI analysis');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -36,7 +50,18 @@ export default function MatchingJobsList({
             {selectedConfig.name}
           </h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {jobs.some(j => !j.ai_parsed && j.is_relevant) && (
+            <button
+              onClick={handleAnalyzePreMatches}
+              disabled={analyzing}
+              className="px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-violet-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-[0_2px_8px_rgba(99,102,241,0.15)] cursor-pointer disabled:opacity-50 transition-all border border-indigo-500/20"
+            >
+              {analyzing ? <Loader2 size={12} className="animate-spin" /> : <Brain size={12} />}
+              <span>Analyze Pre-matches</span>
+            </button>
+          )}
+
           {/* Filters */}
           <div className="flex bg-gray-950 rounded-lg p-0.5 border border-gray-900 text-[10px]">
             {(['all', 'relevant', 'pre-match', 'irrelevant'] as const).map((opt) => (

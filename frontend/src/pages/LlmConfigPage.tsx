@@ -28,6 +28,14 @@ export default function LlmConfigPage() {
   // Actions loading states
   const [actionId, setActionId] = useState<number | null>(null);
 
+  // Test states for form
+  const [formTestLoading, setFormTestLoading] = useState(false);
+  const [formTestResult, setFormTestResult] = useState<{ success: boolean; message: string; details?: string } | null>(null);
+
+  // Test states for individual stored config cards
+  const [cardTestStates, setCardTestStates] = useState<Record<number, { loading: boolean; success?: boolean; error?: string }>>({});
+
+
   const fetchConfigs = async () => {
     setLoading(true);
     setError(null);
@@ -44,6 +52,73 @@ export default function LlmConfigPage() {
   useEffect(() => {
     fetchConfigs();
   }, []);
+
+  // Clear test results on input change
+  useEffect(() => {
+    setFormTestResult(null);
+  }, [provider, modelName, apiKey]);
+
+  const handleTestFormConnection = async () => {
+    if (!modelName.trim()) {
+      setError('Model Name is required to test connection.');
+      return;
+    }
+
+    if (provider !== 'ollama' && !apiKey.trim()) {
+      setError(`API Key is required for provider ${provider} to test connection.`);
+      return;
+    }
+
+    setFormTestLoading(true);
+    setFormTestResult(null);
+    setError(null);
+
+    try {
+      const res = await api.llmConfigs.testConnection({
+        provider,
+        model_name: modelName.trim(),
+        api_key: apiKey.trim() || null
+      });
+      setFormTestResult(res);
+    } catch (err: any) {
+      setFormTestResult({
+        success: false,
+        message: err.message || 'Connection test failed',
+        details: err.message
+      });
+    } finally {
+      setFormTestLoading(false);
+    }
+  };
+
+  const handleTestCardConnection = async (id: number) => {
+    setCardTestStates(prev => ({
+      ...prev,
+      [id]: { loading: true }
+    }));
+
+    try {
+      const res = await api.llmConfigs.testConnectionSaved(id);
+      setCardTestStates(prev => ({
+        ...prev,
+        [id]: {
+          loading: false,
+          success: res.success,
+          error: res.success ? undefined : (res.details || res.message)
+        }
+      }));
+    } catch (err: any) {
+      setCardTestStates(prev => ({
+        ...prev,
+        [id]: {
+          loading: false,
+          success: false,
+          error: err.message || 'Connection test failed'
+        }
+      }));
+    }
+  };
+
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,25 +290,64 @@ export default function LlmConfigPage() {
               </label>
             </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={formLoading}
-              className="w-full mt-4 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold tracking-wide transition-all shadow-[0_4px_16px_rgba(99,102,241,0.2)] flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {formLoading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  <span>Create Strategy</span>
-                </>
-              )}
-            </button>
+            {formTestResult && (
+              <div className={`p-3 border rounded-xl text-xs flex gap-2 items-start animate-fadeIn ${
+                formTestResult.success 
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              }`}>
+                <AlertCircle className="shrink-0 mt-0.5" size={14} />
+                <div className="flex-1 space-y-1">
+                  <div className="font-semibold">
+                    {formTestResult.success ? 'Connection Successful' : 'Connection Failed'}
+                  </div>
+                  <div className="text-gray-300 select-text leading-relaxed font-mono text-[10px] whitespace-pre-wrap break-all">
+                    {formTestResult.success 
+                      ? `Model responded: "${formTestResult.message}"` 
+                      : formTestResult.details || formTestResult.message}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <button
+                type="button"
+                onClick={handleTestFormConnection}
+                disabled={formLoading || formTestLoading}
+                className="py-3 px-4 bg-gray-900 hover:bg-gray-800 border border-gray-800 disabled:opacity-50 text-gray-300 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {formTestLoading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin text-indigo-400" />
+                    <span className="text-xs">Testing...</span>
+                  </>
+                ) : (
+                  <span className="text-xs">Test Connection</span>
+                )}
+              </button>
+
+              <button
+                type="submit"
+                disabled={formLoading || formTestLoading}
+                className="py-3 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold tracking-wide transition-all shadow-[0_4px_16px_rgba(99,102,241,0.2)] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {formLoading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span className="text-xs">Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus size={14} />
+                    <span className="text-xs">Create Strategy</span>
+                  </>
+                )}
+              </button>
+            </div>
           </form>
+
         </div>
 
         {/* Right Side: Configs List */}
@@ -254,71 +368,119 @@ export default function LlmConfigPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {configs.map((cfg) => (
-                <div 
-                  key={cfg.id}
-                  className={`glass-effect rounded-xl border p-4.5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 transition-all duration-200 ${
-                    cfg.is_active 
-                      ? 'border-indigo-500/30 bg-indigo-950/10 shadow-[0_0_24px_rgba(99,102,241,0.05)]' 
-                      : 'border-gray-800/80 hover:border-gray-700/80'
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Badge / Brand color symbol */}
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border ${
-                      cfg.provider === 'openai' 
-                        ? 'bg-emerald-600/10 border-emerald-500/20 text-emerald-400' 
-                        : cfg.provider === 'anthropic' 
-                          ? 'bg-amber-600/10 border-amber-500/20 text-amber-400' 
-                          : cfg.provider === 'openrouter'
-                            ? 'bg-violet-600/10 border-violet-500/20 text-violet-400'
-                            : 'bg-slate-600/10 border-slate-500/20 text-slate-400'
-                    }`}>
-                      {cfg.provider}
-                    </span>
-
-                    <div>
-                      <h3 className="font-semibold text-white text-base leading-tight">
-                        {cfg.model_name}
-                      </h3>
-                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500">
-                        <Key size={12} />
-                        <span>
-                          {cfg.api_key ? `••••••••••••${cfg.api_key.slice(-4)}` : 'No API key needed (Local)'}
+              {configs.map((cfg) => {
+                const cardState = cardTestStates[cfg.id];
+                return (
+                  <div 
+                    key={cfg.id}
+                    className={`glass-effect rounded-xl border p-4.5 flex flex-col gap-3.5 transition-all duration-200 ${
+                      cfg.is_active 
+                        ? 'border-indigo-500/30 bg-indigo-950/10 shadow-[0_0_24px_rgba(99,102,241,0.05)]' 
+                        : 'border-gray-800/80 hover:border-gray-700/80'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                      <div className="flex items-start gap-4">
+                        {/* Badge / Brand color symbol */}
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border ${
+                          cfg.provider === 'openai' 
+                            ? 'bg-emerald-600/10 border-emerald-500/20 text-emerald-400' 
+                            : cfg.provider === 'anthropic' 
+                              ? 'bg-amber-600/10 border-amber-500/20 text-amber-400' 
+                              : cfg.provider === 'openrouter'
+                                ? 'bg-violet-600/10 border-violet-500/20 text-violet-400'
+                                : 'bg-slate-600/10 border-slate-500/20 text-slate-400'
+                        }`}>
+                          {cfg.provider}
                         </span>
+
+                        <div>
+                          <h3 className="font-semibold text-white text-base leading-tight">
+                            {cfg.model_name}
+                          </h3>
+                          <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500">
+                            <Key size={12} />
+                            <span>
+                              {cfg.api_key ? `••••••••••••${cfg.api_key.slice(-4)}` : 'No API key needed (Local)'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 self-end sm:self-center">
+                        {/* Connection Test Action */}
+                        <button
+                          onClick={() => handleTestCardConnection(cfg.id)}
+                          disabled={actionId !== null || cardState?.loading}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer flex items-center gap-1 border ${
+                            cardState?.loading
+                              ? 'bg-gray-950 border-gray-800 text-gray-400'
+                              : cardState?.success
+                                ? 'bg-emerald-600/10 border-emerald-500/20 text-emerald-400'
+                                : cardState?.success === false
+                                  ? 'bg-rose-600/10 border-rose-500/20 text-rose-400 hover:bg-rose-950/30'
+                                  : 'bg-gray-900 border-gray-800 hover:bg-gray-800 text-gray-300'
+                          }`}
+                          title="Test Connection"
+                        >
+                          {cardState?.loading ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin text-indigo-400" />
+                              <span>Testing...</span>
+                            </>
+                          ) : cardState?.success ? (
+                            <>
+                              <Check size={13} />
+                              <span>Connected</span>
+                            </>
+                          ) : cardState?.success === false ? (
+                            <span>Failed (Retry)</span>
+                          ) : (
+                            <span>Test API</span>
+                          )}
+                        </button>
+
+                        {/* Status Display / Activate Action */}
+                        {cfg.is_active ? (
+                          <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg text-xs font-semibold animate-soft-pulse">
+                            <Check size={13} strokeWidth={2.5} />
+                            <span>Active</span>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleActivate(cfg.id)}
+                            disabled={actionId !== null}
+                            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer"
+                          >
+                            {actionId === cfg.id ? <Loader2 size={13} className="animate-spin" /> : 'Activate'}
+                          </button>
+                        )}
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => handleDelete(cfg.id)}
+                          disabled={actionId !== null}
+                          className="p-2 bg-gray-900/50 hover:bg-rose-950/30 text-gray-500 hover:text-rose-400 rounded-lg border border-gray-800/80 transition-colors cursor-pointer"
+                          title="Delete configuration"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 self-end sm:self-center">
-                    {/* Status Display / Activate Action */}
-                    {cfg.is_active ? (
-                      <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg text-xs font-semibold animate-soft-pulse">
-                        <Check size={13} strokeWidth={2.5} />
-                        <span>Active</span>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleActivate(cfg.id)}
-                        disabled={actionId !== null}
-                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-semibold tracking-wide transition-colors cursor-pointer"
-                      >
-                        {actionId === cfg.id ? <Loader2 size={13} className="animate-spin" /> : 'Activate'}
-                      </button>
+                    {/* Test Error Panel */}
+                    {cardState?.success === false && cardState.error && (
+                      <div className="p-3 bg-rose-500/5 border border-rose-500/10 rounded-lg text-xs text-rose-400/90 flex gap-2 items-start animate-fadeIn select-text">
+                        <AlertCircle className="shrink-0 mt-0.5" size={13} />
+                        <div className="flex-1">
+                          <span className="font-semibold mr-1">Connection Error:</span>
+                          <code className="text-[11px] leading-relaxed text-gray-300 font-mono break-all whitespace-pre-wrap">{cardState.error}</code>
+                        </div>
+                      </div>
                     )}
-
-                    {/* Delete */}
-                    <button
-                      onClick={() => handleDelete(cfg.id)}
-                      disabled={actionId !== null}
-                      className="p-2 bg-gray-900/50 hover:bg-rose-950/30 text-gray-500 hover:text-rose-400 rounded-lg border border-gray-800/80 transition-colors cursor-pointer"
-                      title="Delete configuration"
-                    >
-                      <Trash2 size={14} />
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

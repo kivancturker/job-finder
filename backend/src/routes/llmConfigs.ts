@@ -3,6 +3,8 @@ import db from '../db/database';
 import { LLMConfigRow, ApiResponse, LLMConfig } from '../types';
 import { mapLLMConfig } from '../mappers';
 import { validateLlmProvider } from '../utils/validators';
+import { LlmService } from '../services/llmService';
+
 
 const router = Router();
 
@@ -148,4 +150,42 @@ router.delete('/:id', (req: Request, res: Response<ApiResponse<{ id: number }>>)
   }
 });
 
+// POST /api/llm_configs/test - Test connection to an LLM provider (unsaved or saved config)
+router.post('/test', async (req: Request, res: Response<ApiResponse<{ success: boolean; message: string; details?: string }>>) => {
+  try {
+    let { id, provider, model_name, api_key } = req.body;
+
+    // If ID is provided, retrieve config from the database
+    if (id) {
+      const row = db.prepare('SELECT * FROM llm_configs WHERE id = ?').get(id) as LLMConfigRow | undefined;
+      if (!row) {
+        return res.status(404).json({ success: false, error: 'LLM Configuration not found' });
+      }
+      provider = row.provider;
+      model_name = row.model_name;
+      api_key = row.api_key;
+    }
+
+    if (!provider || !model_name) {
+      return res.status(400).json({ success: false, error: 'Provider and model_name are required to test connection' });
+    }
+
+    try {
+      validateLlmProvider(provider);
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+
+    const testResult = await LlmService.testConnection(provider, model_name, api_key || null);
+    
+    res.json({
+      success: true,
+      data: testResult
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;
+

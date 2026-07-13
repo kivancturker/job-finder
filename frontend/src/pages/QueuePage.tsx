@@ -17,7 +17,7 @@ export default function QueuePage() {
 
     const connectSSE = () => {
       setConnectionStatus('connecting');
-      eventSource = new EventSource('/api/run-search/queue-sse');
+      eventSource = new EventSource('/api/run-search/sse');
 
       eventSource.onopen = () => {
         setConnectionStatus('connected');
@@ -103,6 +103,16 @@ export default function QueuePage() {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Are you sure you want to delete this task from history?')) return;
+    try {
+      await api.runSearch.deleteTask(taskId);
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete task');
+    }
+  };
+
   const processingTask = tasks.find((t) => t.status === 'processing');
 
   return (
@@ -151,7 +161,7 @@ export default function QueuePage() {
         ) : (
           <div className="space-y-8">
             <ActiveTaskCard task={processingTask} />
-            <QueueGrid tasks={tasks} />
+            <QueueGrid tasks={tasks} onDeleteTask={handleDeleteTask} />
           </div>
         )}
       </div>

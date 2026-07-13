@@ -13,5 +13,15 @@ export const runSearch = {
   clearQueue: () => 
     request<{ tasks: QueueItem[] }>('/run-search/clear', {
       method: 'POST'
+    }),
+
+  analyzePreMatches: () => 
+    request<{ task: QueueItem }>('/run-search/analyze-prematches', {
+      method: 'POST'
+    }),
+
+  deleteTask: (id: string) => 
+    request<{ success: boolean; tasks: QueueItem[] }>(`/run-search/queue/${id}`, {
+      method: 'DELETE'
     })
 };
