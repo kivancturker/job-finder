@@ -1,0 +1,39 @@
+Here is a list of general requirement of this project. Because I saw some gaps in the RPD and TASKS.
+
+All the database tables, their types and constraints must be specified. Create a .md file for all the database information.
+Create .md files for all the page description. It should describe the whole structure to the agent. Create one for each page.
+
+
+Here is what I want to see in the web ui.
+
+It will be split like ai chat interface splits or outlook email interface looks. On the left side there will be a sidebar contains buttons. Right side shows the content of whatever page we are on. 
+If it is about job description page, then show me the job description content, if it is about another thing then show me that content.
+
+Here are the page types I need:
+Job description page
+- A page where I can input a new company information, their career url etc.
+- A page where I can see all the companies I recorded.
+- A page where I can edit those information.
+- A page where I can see the Task Queue progress. It should be like everyother taskqueue, successfully completed onces are green color, on going part is orange color and the incoming are whatever color. Give me color recommendation on this.
+- A page where can I make AI configuration like choosing the ai and giving api key etc. I should be able to make configuration conveniently.
+- A page where I can create a job search configuration. I will include multiple keywords, it should be related to that keywords.
+
+On the sidebar:
+- Companies button: On click show me the whole companies on the page. On the company name there should be edit, delete button. delete button warns me first then deletes. Edit button creates an edit page.
+On page when I click a company show me the job listing that is recorded an relevant to me. 
+Indicator that tells me if I clicked on that job posting. 
+
+- TaskQueue: On click it shows TaskQueue progress.
+
+- LLM config: On click I should be able to make configuration for the ai like api key, model etc whatever necessery.
+
+- Job search: On click show me created job search configurations. I want to create a job search strategy like database internals, maybe junior dev search, countrywise search etc.
+I don't want it to be serve a single purpose. I should be able to create a new configuration.
+The job result of that configuration.
+
+All the above are start from top to bottom.
+Then there should be big button says start job search etc. To trigger a new job search.
+On clicking that it should ask me whic configuration to use. (I will explain the configurations)
+
+Based on that latest requirement create necesarry md files, also create a new TASKS.md and PRD.md.
+Yours are too vague.
