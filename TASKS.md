@@ -19,9 +19,9 @@ Once complete leave a checkmark.
 - [x] Update `job_postings` with the LLM response.
 
 ## Phase 4: Frontend Scaffolding & Layout
-- [ ] Initialize Vite + React + Tailwind.
-- [ ] Implement the Split-Pane layout (Sidebar component + Main Content Area).
-- [ ] Setup React Router to handle the different right-pane views.
+- [x] Initialize Vite + React + Tailwind.
+- [x] Implement the Split-Pane layout (Sidebar component + Main Content Area).
+- [x] Setup React Router to handle the different right-pane views.
 
 ## Phase 5: Building the Views (Right Pane)
 - [ ] Build the **Companies Page**: List view with Edit/Delete buttons.
