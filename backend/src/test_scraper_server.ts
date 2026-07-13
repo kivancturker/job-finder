@@ -13,6 +13,7 @@ app.get('/careers-static', (req, res) => {
         <div class="jobs-list">
           <a href="http://localhost:4000/jobs/systems-engineer">Systems Engineer</a>
           <a href="http://localhost:4000/jobs/db-developer">Database Developer</a>
+          <a href="http://localhost:4000/jobs/react-dev">React Developer</a>
           <a href="http://localhost:4000/about-us">About Us Page Link</a>
         </div>
       </body>
@@ -85,6 +86,17 @@ app.get('/jobs/intern-databases', (req, res) => {
       <body>
         <h1>Database Intern</h1>
         <p>Internship for students learning systems programming. Keywords: C++, SQLite, Git, database optimization.</p>
+      </body>
+    </html>
+  `);
+});
+
+app.get('/jobs/react-dev', (req, res) => {
+  res.send(`
+    <html>
+      <body>
+        <h1>React Frontend Developer</h1>
+        <p>Looking for a UI designer with skills in HTML, CSS, Tailwind, and React. Only frontend web interfaces are designed.</p>
       </body>
     </html>
   `);

@@ -2,7 +2,9 @@ import { chromium } from 'playwright';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import db from '../db/database';
-import { CompanyRow } from '../types';
+import { CompanyRow, SearchConfigRow, SearchConfig } from '../types';
+import { matchKeywords } from './filterEngine';
+import { LlmService } from './llmService';
 
 // Helper to check if URL looks like a job details link
 function isJobUrl(url: string, text: string): boolean {
@@ -170,6 +172,21 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
     throw new Error(`Company with id ${companyId} not found`);
   }
 
+  // Fetch and parse search config details
+  const configRow = db.prepare('SELECT * FROM search_configs WHERE id = ?').get(searchConfigId) as SearchConfigRow | undefined;
+  if (!configRow) {
+    throw new Error(`Search config with id ${searchConfigId} not found`);
+  }
+  const searchConfig: SearchConfig = {
+    id: configRow.id,
+    name: configRow.name,
+    keywords: JSON.parse(configRow.keywords),
+    negative_keywords: configRow.negative_keywords ? JSON.parse(configRow.negative_keywords) : null,
+    min_experience: configRow.min_experience,
+    target_countries: configRow.target_countries ? JSON.parse(configRow.target_countries) : null,
+    created_at: configRow.created_at
+  };
+
   console.log(`[ScraperService] Starting scrape for ${company.name} (${company.career_url})`);
 
   let listings: { title: string; url: string }[] = [];
@@ -209,8 +226,8 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
 
   const checkUrlStmt = db.prepare('SELECT id FROM job_postings WHERE url = ?');
   const insertJobStmt = db.prepare(`
-    INSERT INTO job_postings (company_id, search_config_id, title, url, raw_text, is_relevant, ai_parsed, is_visited)
-    VALUES (?, ?, ?, ?, ?, 0, 0, 0)
+    INSERT INTO job_postings (company_id, search_config_id, title, url, raw_text, is_relevant, ai_parsed, ai_summary, tech_stack, is_visited)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
   `);
 
   for (const [url, title] of uniqueListingsMap.entries()) {
@@ -237,14 +254,59 @@ export async function scrapeCompany(companyId: number, searchConfigId: number): 
         continue;
       }
 
-      // 3. Insert into DB
-      insertJobStmt.run(company.id, searchConfigId, title, url, rawText);
+      // 3. Pre-Filter matching (positive keywords match)
+      const passesFilter = matchKeywords(rawText, searchConfig.keywords);
+      let isRelevant = 0;
+      let aiParsed = 0;
+      let aiSummary = null;
+      let techStack = null;
+
+      if (!passesFilter) {
+        console.log(`[ScraperService] Job "${title}" failed keyword pre-filter. Skipping LLM.`);
+        isRelevant = 0;
+        aiParsed = 1;
+        aiSummary = 'Pre-filtered: Positive keywords did not match';
+      } else {
+        console.log(`[ScraperService] Job "${title}" passed keyword pre-filter. Evaluating via LLM...`);
+        try {
+          const aiResult = await LlmService.analyzeJob(rawText, searchConfig, title, company.name);
+          if (aiResult) {
+            isRelevant = aiResult.is_relevant ? 1 : 0;
+            aiParsed = 1;
+            aiSummary = aiResult.ai_summary;
+            techStack = JSON.stringify(aiResult.tech_stack);
+          } else {
+            // No active LLM configuration
+            isRelevant = 1; // Temporarily mark as relevant since keyword match passed, but pending AI
+            aiParsed = 0;
+            aiSummary = 'Pending AI review';
+          }
+        } catch (llmErr: any) {
+          console.error(`[ScraperService] LLM evaluation failed: ${llmErr.message}`);
+          isRelevant = 1;
+          aiParsed = 0;
+          aiSummary = `Failed LLM analysis: ${llmErr.message}`;
+        }
+      }
+
+      // 4. Insert into DB
+      insertJobStmt.run(
+        company.id, 
+        searchConfigId, 
+        title, 
+        url, 
+        rawText, 
+        isRelevant, 
+        aiParsed, 
+        aiSummary, 
+        techStack
+      );
       processedCount++;
 
       // Be gentle, sleep briefly (e.g. 500ms)
       await new Promise(resolve => setTimeout(resolve, 500));
     } catch (err: any) {
-      console.error(`[ScraperService] Failed to fetch job details for ${url}:`, err.message);
+      console.error(`[ScraperService] Failed to process job details for ${url}:`, err.message);
     }
   }
 

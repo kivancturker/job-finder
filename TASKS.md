@@ -14,9 +14,9 @@ Once complete leave a checkmark.
 - [x] Build the `/api/run-search` endpoint. It must accept a `search_config_id`, fetch all companies, and push them to the `QueueService`.
 
 ## Phase 3: AI Evaluation Pipeline
-- [ ] Implement the Pre-Filter: Check scraped text against `search_configs.keywords`. If no match, discard or mark `is_relevant = false`.
-- [ ] Implement the LLM Service: Fetch the active config from `llm_configs`. Send the text to the LLM requesting a JSON response (summary, tech_stack).
-- [ ] Update `job_postings` with the LLM response.
+- [x] Implement the Pre-Filter: Check scraped text against `search_configs.keywords`. If no match, discard or mark `is_relevant = false`.
+- [x] Implement the LLM Service: Fetch the active config from `llm_configs`. Send the text to the LLM requesting a JSON response (summary, tech_stack).
+- [x] Update `job_postings` with the LLM response.
 
 ## Phase 4: Frontend Scaffolding & Layout
 - [ ] Initialize Vite + React + Tailwind.
